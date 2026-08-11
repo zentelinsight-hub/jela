@@ -1,4 +1,4 @@
-import { AlertCircle, CheckCircle2, Copy, Download, FileCheck2, ShieldCheck, Smartphone } from 'lucide-react'
+import { AlertCircle, CheckCircle2, Download, FileCheck2, ShieldCheck, Smartphone } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { ButtonLink } from '../components/ButtonLink'
 import { PageIntro } from '../components/PageIntro'
@@ -9,7 +9,6 @@ import { canonicalUrl } from '../lib/seo'
 
 export default function DownloadPage() {
   const [result, setResult] = useState<ReleaseResult | null>(null)
-  const [copied, setCopied] = useState(false)
 
   const refresh = useCallback(async () => {
     const nextResult = await getCurrentAndroidRelease()
@@ -43,17 +42,11 @@ export default function DownloadPage() {
     publisher: { '@type': 'Organization', name: 'Zentel Insight' },
   } : null, [result])
 
-  const copyChecksum = async (checksum: string) => {
-    await navigator.clipboard.writeText(checksum)
-    setCopied(true)
-    window.setTimeout(() => setCopied(false), 1800)
-  }
-
   return (
     <main>
       <Seo
         title="Download Jela AI"
-        description="Get the official Jela AI Android APK, release details, checksum and clear installation guidance."
+        description="Get the official Jela AI Android APK with verified release details and clear installation guidance."
         path="/download"
         structuredData={structuredData}
       />
@@ -88,17 +81,6 @@ export default function DownloadPage() {
                   <div><dt>File size</dt><dd>{formatFileSize(result.release.file_size)}</dd></div>
                   <div><dt>Minimum supported version</dt><dd>{result.release.minimum_supported_version ?? 'Not specified'}</dd></div>
                 </dl>
-                {result.release.release_notes ? (
-                  <div className="release-notes"><h3>Release notes</h3><p>{result.release.release_notes}</p></div>
-                ) : null}
-                {result.release.sha256 ? (
-                  <div className="checksum">
-                    <div><span>SHA-256 checksum</span><code>{result.release.sha256}</code></div>
-                    <button type="button" onClick={() => copyChecksum(result.release.sha256!)} aria-label="Copy SHA-256 checksum">
-                      <Copy size={17} />{copied ? 'Copied' : 'Copy'}
-                    </button>
-                  </div>
-                ) : null}
                 <ButtonLink href={result.downloadUrl} external download variant="success" className="release-download">
                   <Download size={20} />Download APK
                 </ButtonLink>
