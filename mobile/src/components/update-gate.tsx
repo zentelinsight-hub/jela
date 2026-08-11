@@ -2,7 +2,7 @@ import * as Linking from 'expo-linking';
 import { Download } from 'lucide-react-native';
 import type { PropsWithChildren } from 'react';
 import { useEffect, useState } from 'react';
-import { Modal, View } from 'react-native';
+import { AppState, Modal, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { AppText } from '@/components/app-text';
@@ -12,6 +12,7 @@ import { useAppTheme } from '@/contexts/theme-context';
 import { fetchLatestAndroidRelease } from '@/services/releases';
 import { radius } from '@/theme/tokens';
 import type { AppRelease } from '@/types/database';
+import { getSupabase } from '@/lib/supabase';
 
 export function UpdateGate({ children }: PropsWithChildren) {
   const { session } = useAuth();
@@ -20,13 +21,20 @@ export function UpdateGate({ children }: PropsWithChildren) {
 
   useEffect(() => {
     if (!session) return;
-    fetchLatestAndroidRelease()
+    const refresh = () => fetchLatestAndroidRelease()
       .then((result) => {
-        if (result.state === 'required' && result.release) setRequired(result.release);
+        setRequired(result.state === 'required' && result.release ? result.release : null);
       })
       .catch(() => {
         // A failed update check must not lock users out. Manual retry remains in Settings.
       });
+    void refresh();
+    const supabase = getSupabase();
+    const channel = supabase.channel('current-android-release-live')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'jela_ai_releases', filter: 'platform=eq.android' }, () => void refresh())
+      .subscribe();
+    const appState = AppState.addEventListener('change', (state) => { if (state === 'active') void refresh(); });
+    return () => { appState.remove(); void supabase.removeChannel(channel); };
   }, [session]);
 
   return (

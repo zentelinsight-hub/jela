@@ -13,7 +13,14 @@ const allowedTypes = new Set([
   'image/webp',
 ]);
 
-export async function pickAndUploadAttachment(conversationId?: string | null) {
+export type PickedAttachment = {
+  uri: string;
+  name: string;
+  mimeType: string;
+  size: number;
+};
+
+export async function pickAttachment(): Promise<PickedAttachment | null> {
   const result = await DocumentPicker.getDocumentAsync({
     type: [...allowedTypes],
     copyToCacheDirectory: true,
@@ -26,7 +33,10 @@ export async function pickAndUploadAttachment(conversationId?: string | null) {
     throw new UserMessageError('Choose a PDF, text file, JPEG, PNG, or WebP image.');
   }
   if ((asset.size ?? 0) > maxBytes) throw new UserMessageError('Attachments must be 10 MB or smaller.');
+  return { uri: asset.uri, name: asset.name, mimeType: asset.mimeType, size: asset.size ?? 0 };
+}
 
+export async function uploadAttachment(asset: PickedAttachment, conversationId?: string | null) {
   const supabase = getSupabase();
   const { data: sessionData } = await supabase.auth.getSession();
   const userId = sessionData.session?.user.id;
@@ -50,7 +60,7 @@ export async function pickAndUploadAttachment(conversationId?: string | null) {
       storage_path: path,
       file_name: asset.name,
       mime_type: asset.mimeType,
-      size_bytes: asset.size ?? file.byteLength,
+      size_bytes: asset.size || file.byteLength,
       status: 'ready',
     })
     .select('*')
@@ -60,6 +70,13 @@ export async function pickAndUploadAttachment(conversationId?: string | null) {
     throw record.error;
   }
   return record.data;
+}
+
+export async function removeUploadedAttachment(id: string, storagePath: string) {
+  const supabase = getSupabase();
+  const { error: recordError } = await supabase.from('jela_attachments').delete().eq('id', id);
+  if (recordError) throw recordError;
+  await supabase.storage.from('jela-attachments').remove([storagePath]);
 }
 
 export async function createAttachmentUrl(path: string) {

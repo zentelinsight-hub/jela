@@ -1,6 +1,6 @@
 # Jela AI
 
-Jela AI is an intelligent companion built by Zentel Insight for learning, research, creation and practical problem-solving. This repository contains the Phase 1 production public website and the Phase 2 native Android application and backend.
+Jela AI is an intelligent companion built by Zentel Insight for learning, research, creation and practical problem-solving. This repository contains the production public website, native Android application, and Supabase control plane developed through Phases 1–4.
 
 The website deliberately has no account, authentication, web chat, billing dashboard or theme switcher. Those capabilities live in the isolated native application under `mobile/`.
 
@@ -17,6 +17,8 @@ Copy `.env.example` to `.env.local` and provide the public values for the existi
 ```text
 VITE_SUPABASE_URL=
 VITE_SUPABASE_PUBLISHABLE_KEY=
+VITE_SITE_URL=https://jela-snowy.vercel.app
+VITE_GOOGLE_SITE_VERIFICATION=
 ```
 
 Install and run locally:
@@ -53,11 +55,17 @@ mobile/
   src/services/      Supabase, streaming, release, billing and admin clients
 ```
 
-All required routes are declared in `src/App.tsx`. Browser-history hosting must fall back to `index.html`; `public/_redirects` provides that rule for compatible static hosts.
+All required routes are declared in `src/App.tsx`. `vercel.json` rewrites only those real application routes to `index.html`, so unknown public paths retain an actual HTTP 404. `public/_redirects` provides the private Sites-host fallback.
+
+## Search and canonical deployment
+
+The production canonical origin is `https://jela-snowy.vercel.app` unless `VITE_SITE_URL` explicitly supplies an approved replacement. Canonical tags, Open Graph metadata, Twitter metadata, `robots.txt`, `sitemap.xml`, favicons, and SoftwareApplication structured data are included. Callback pages, missing pages, and Vercel preview deployments are marked `noindex`.
+
+For Google Search Console, set `VITE_GOOGLE_SITE_VERIFICATION` to the exact HTML-tag verification token in the production environment, deploy, then submit `https://jela-snowy.vercel.app/sitemap.xml`. Do not set that token in source control.
 
 ## Official assets
 
-The supplied files are used without redrawing or altering the logos:
+The supplied source logos are not redrawn. Transparent Jela derivatives are generated from the official transparent source; the supplied Zentel Insight JPG deliberately retains its white background:
 
 - Jela AI logo: `public/brand/jela-ai-logo.png`
 - Zentel Insight logo: `public/brand/zentel-insight-logo.jpg`
@@ -78,23 +86,23 @@ The release migration creates:
 - the private `jela-ai-releases` Storage bucket with short-lived downloads for the current verified APK;
 - no public upload, update or delete policies.
 
-APK objects follow this structure:
+APK objects follow this versioned structure:
 
 ```text
 jela-ai-releases/
   android/
-    jela-ai-v1.0.0.apk
+    jela-ai-v1.1.0.apk
 ```
 
 Release records retain previous versions for rollback. Publishing a release means uploading the real APK through a trusted server/admin process, calculating its SHA-256 checksum, creating the metadata row and transactionally moving `is_current` to the approved version. No fake APK is included in this repository.
 
-When no current row exists—or public Supabase variables have not been provided—the download page shows the intentional preparation state.
+When no current row exists—or public Supabase variables have not been provided—the download page reports that no verified public release is currently available. It never invents a release.
 
 ## Phase 2 native application
 
 The native application is documented in [`mobile/README.md`](mobile/README.md). It uses Expo SDK 57 and React Native 0.86.2 with secure Supabase authentication, separate auth/user/admin route groups, native Chat, persistent conversation history, backend-authoritative credits and account states, backend-driven commerce states, private attachment architecture, update enforcement, and the existing APK release system.
 
-Production features stay unavailable until their real backend configuration exists. The database therefore begins with no invented plan, price, model policy, credit grant, subscription, checkout result, APK, or current release. Chat, attachments, voice, and push flags default to false. This is an intentional production safety state, not placeholder functionality.
+Production capabilities remain server-authoritative. Live plan, account, feature, conversation, billing, release, appearance, avatar, and attachment state reconciles through scoped Supabase Realtime subscriptions plus foreground refresh. Local optimistic state rolls back on failed writes, and provider secrets never enter the client bundle.
 
 Validate both products independently:
 

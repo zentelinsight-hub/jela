@@ -40,7 +40,7 @@ const articles: Record<string, Article> = {
       {
         id: 'official-download', title: 'Official Android download', content: <>
           <p>When a release is available, download the APK from the official <Link to="/download">Jela AI download page</Link>. The page will identify the current version and may include its file size, release notes, minimum supported version and SHA-256 checksum.</p>
-          <p>If no current release exists, the page will say that Jela is being prepared. It will never present a fabricated file or inactive download control.</p>
+          <p>The page reads the current release directly from Jela AI's production release service. It never presents a fabricated file or inactive download control.</p>
         </>,
       },
       {

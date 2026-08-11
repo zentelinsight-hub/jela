@@ -2,7 +2,7 @@ import * as Linking from 'expo-linking';
 import * as WebBrowser from 'expo-web-browser';
 import { Check } from 'lucide-react-native';
 import { useEffect, useState } from 'react';
-import { View } from 'react-native';
+import { AppState, View } from 'react-native';
 
 import { AppText } from '@/components/app-text';
 import { Button } from '@/components/button';
@@ -14,6 +14,7 @@ import { formatMoney } from '@/lib/format';
 import { friendlyError } from '@/lib/errors';
 import { fetchPlans, initializePlanPayment, verifyPlanPayment } from '@/services/commerce';
 import type { Plan } from '@/types/database';
+import { getSupabase } from '@/lib/supabase';
 
 export default function PlansScreen() {
   const { colors } = useAppTheme();
@@ -22,13 +23,21 @@ export default function PlansScreen() {
   const [error, setError] = useState<string | null>(null);
   const [processingPlan, setProcessingPlan] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
-  const load = async () => {
-    setLoading(true);
+  const load = async (showLoading = true) => {
+    if (showLoading) setLoading(true);
     try { setPlans(await fetchPlans()); setError(null); }
     catch (loadError) { setError(friendlyError(loadError, 'Could not load plans.')); }
-    finally { setLoading(false); }
+    finally { if (showLoading) setLoading(false); }
   };
   useEffect(() => { void load(); }, []);
+  useEffect(() => {
+    const supabase = getSupabase();
+    const channel = supabase.channel('public-plans-live')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'jela_plans' }, () => void load(false))
+      .subscribe();
+    const appState = AppState.addEventListener('change', (state) => { if (state === 'active') void load(false); });
+    return () => { appState.remove(); void supabase.removeChannel(channel); };
+  }, []);
   const pay = async (plan: Plan) => {
     setProcessingPlan(plan.code); setError(null); setNotice(null);
     try {

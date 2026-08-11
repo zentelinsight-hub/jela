@@ -1,5 +1,5 @@
 import { CheckCircle2, ShieldCheck } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { PageIntro } from '../components/PageIntro'
 import { Seo } from '../components/Seo'
 import { webSupabase } from '../lib/supabase'
@@ -9,13 +9,22 @@ type Plan = { id: string; code: string; name: string; description: string | null
 export default function PricingPage() {
   const [plans, setPlans] = useState<Plan[] | null>(null)
   const [error, setError] = useState(!webSupabase)
+  const refresh = useCallback(async () => {
+    if (!webSupabase) return
+    const { data, error: queryError } = await webSupabase.from('jela_public_plans').select('*').order('sort_order')
+    if (queryError) setError(true)
+    else { setPlans((data ?? []) as Plan[]); setError(false) }
+  }, [])
   useEffect(() => {
     if (!webSupabase) return
-    webSupabase.from('jela_public_plans').select('*').order('sort_order').then(({ data, error: queryError }) => {
-      if (queryError) setError(true)
-      else setPlans((data ?? []) as Plan[])
-    })
-  }, [])
+    queueMicrotask(() => void refresh())
+    const channel = webSupabase.channel('website-public-plans')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'jela_plans' }, () => void refresh())
+      .subscribe()
+    const onVisibility = () => { if (document.visibilityState === 'visible') void refresh() }
+    document.addEventListener('visibilitychange', onVisibility)
+    return () => { document.removeEventListener('visibilitychange', onVisibility); void webSupabase?.removeChannel(channel) }
+  }, [refresh])
   return <main>
     <Seo title="Jela AI Plans" description="Compare current Jela AI plans and public features." path="/pricing" />
     <PageIntro eyebrow="Simple, authoritative plans" title="Choose how you use Jela AI" description="Prices and availability come directly from Jela AI's production plan service. Internal usage units are never displayed." />

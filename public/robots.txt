@@ -1,2 +1,4 @@
 User-agent: *
 Allow: /
+
+Sitemap: https://jela-snowy.vercel.app/sitemap.xml

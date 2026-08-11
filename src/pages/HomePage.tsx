@@ -207,10 +207,10 @@ export default function HomePage() {
           <Reveal className="android-card__copy">
             <p className="eyebrow eyebrow--green">Jela AI for Android</p>
             <h2>Your intelligent companion, wherever the work happens.</h2>
-            <p>The native Android experience is being prepared for direct, verified distribution from this website.</p>
+            <p>Install the current verified Android release directly from the official Jela AI download page.</p>
             <ButtonLink href="/download" variant="success">
               <Download size={19} aria-hidden="true" />
-              Check release availability
+              Download for Android
             </ButtonLink>
           </Reveal>
           <div className="android-mark" aria-hidden="true">

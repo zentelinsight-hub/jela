@@ -5,8 +5,10 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from 'react';
+import { AppState } from 'react-native';
 
 import { useAuth } from '@/contexts/auth-context';
 import { friendlyError } from '@/lib/errors';
@@ -36,17 +38,18 @@ export function FeatureProvider({ children }: PropsWithChildren) {
   const [flags, setFlags] = useState(defaults);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const initialized = useRef(false);
 
   const refresh = useCallback(async () => {
     if (!session) return;
-    setLoading(true);
+    if (!initialized.current) setLoading(true);
     try {
       setFlags(await fetchFeatureFlags());
       setError(null);
     } catch (featureError) {
       setError(friendlyError(featureError, 'Could not load app features.'));
-      setFlags(defaults);
     } finally {
+      initialized.current = true;
       setLoading(false);
     }
   }, [session]);
@@ -62,6 +65,14 @@ export function FeatureProvider({ children }: PropsWithChildren) {
       .on('postgres_changes', { event: '*', schema: 'public', table: 'jela_app_config' }, () => void refresh())
       .subscribe();
     return () => { void supabase.removeChannel(channel); };
+  }, [refresh, session]);
+
+  useEffect(() => {
+    if (!session) return;
+    const listener = AppState.addEventListener('change', (state) => {
+      if (state === 'active') void refresh();
+    });
+    return () => listener.remove();
   }, [refresh, session]);
 
   const value = useMemo(

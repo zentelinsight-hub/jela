@@ -73,6 +73,10 @@ export function Footer() {
 
       <div className="container footer-bottom">
         <p>© {new Date().getFullYear()} Zentel Insight. All rights reserved.</p>
+        <div className="footer-attribution">
+          <span>Proudly brought to you by Zentel Insight</span>
+          <img src="/brand/zentel-insight-logo.jpg" alt="Zentel Insight" width="58" height="58" />
+        </div>
       </div>
     </footer>
   )

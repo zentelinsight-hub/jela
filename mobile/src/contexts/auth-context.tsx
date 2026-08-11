@@ -9,6 +9,7 @@ import {
   useMemo,
   useState,
 } from 'react';
+import { AppState } from 'react-native';
 
 import { hasConfiguredBackend } from '@/lib/config';
 import { authErrorMessage, friendlyError } from '@/lib/errors';
@@ -103,6 +104,20 @@ export function AuthProvider({ children }: PropsWithChildren) {
       .on('postgres_changes', { event: '*', schema: 'public', table: 'jela_subscriptions', filter: `user_id=eq.${session.user.id}` }, () => void loadAccount(session.user))
       .subscribe();
     return () => { void supabase.removeChannel(channel); };
+  }, [loadAccount, session]);
+
+  useEffect(() => {
+    if (!session) return;
+    const listener = AppState.addEventListener('change', (state) => {
+      if (state !== 'active') return;
+      const supabase = getSupabase();
+      void supabase.auth.getSession().then(({ data }) => {
+        const currentUser = data.session?.user ?? null;
+        setSession(data.session);
+        void loadAccount(currentUser);
+      });
+    });
+    return () => listener.remove();
   }, [loadAccount, session]);
 
   const value = useMemo<AuthContextValue>(

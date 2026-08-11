@@ -20,7 +20,7 @@ export default function EmailVerifiedPage() {
       : webSupabase.auth.verifyOtp({ token_hash: tokenHash!, type: type === 'recovery' ? 'recovery' : 'email' })
     confirm.then(({ error }) => setState(error ? 'error' : 'success')).catch(() => setState('error'))
   }, [])
-  return <main className="callback-page"><Seo title="Verify your email" description="Secure Jela AI email verification." path="/email-verified" /><section className="status-panel" aria-live="polite">
+  return <main className="callback-page"><Seo title="Verify your email" description="Secure Jela AI email verification." path="/email-verified" noIndex /><section className="status-panel" aria-live="polite">
     {state === 'working' ? <><MailCheck /><h1>Verifying your email</h1><p>Please keep this page open for a moment.</p></> : state === 'success' ? <><CheckCircle2 /><h1>Email verified</h1><p>Your Jela AI account is ready. Return to the Android app and log in.</p></> : <><CircleAlert /><h1>Verification link unavailable</h1><p>This link may have expired or already been used. Request a new verification email from the Jela AI app.</p></>}
   </section></main>
 }

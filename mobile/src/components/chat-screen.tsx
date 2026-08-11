@@ -6,6 +6,7 @@ import { Check, Copy, Paperclip, RefreshCw, Send, Share2, ThumbsDown, ThumbsUp, 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
+  AppState,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -24,8 +25,9 @@ import { useAuth } from '@/contexts/auth-context';
 import { useFeatures } from '@/contexts/feature-context';
 import { useAppTheme } from '@/contexts/theme-context';
 import { friendlyError } from '@/lib/errors';
+import { getSupabase } from '@/lib/supabase';
 import { chatInputSchema } from '@/lib/validation';
-import { pickAndUploadAttachment } from '@/services/attachments';
+import { pickAttachment, removeUploadedAttachment, uploadAttachment, type PickedAttachment } from '@/services/attachments';
 import { createRequestId, streamJelaResponse } from '@/services/chat';
 import { fetchConversation } from '@/services/conversations';
 import { radius } from '@/theme/tokens';
@@ -33,7 +35,14 @@ import type { ChatMessage } from '@/types/database';
 import { fetchUsageState } from '@/services/credits';
 
 type LocalMessage = ChatMessage & { local?: boolean };
-type AttachmentDraft = { id: string; file_name: string };
+type AttachmentDraft = {
+  id: string;
+  file_name: string;
+  status: 'uploading' | 'ready' | 'failed';
+  picked: PickedAttachment;
+  storage_path?: string;
+  error?: string;
+};
 
 function makeLocalMessage(role: 'user' | 'assistant', content: string, status: ChatMessage['status']): LocalMessage {
   return {
@@ -112,7 +121,7 @@ export function ChatScreen({ initialConversationId }: { initialConversationId?: 
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [attachments, setAttachments] = useState<AttachmentDraft[]>([]);
-  const [uploading, setUploading] = useState(false);
+  const [pickingAttachment, setPickingAttachment] = useState(false);
   const [mode, setMode] = useState<'auto' | 'deep_think' | 'research'>('auto');
   const [allowedModes, setAllowedModes] = useState<('auto' | 'deep_think' | 'research')[]>(['auto']);
   const [usageAvailable, setUsageAvailable] = useState(true);
@@ -121,8 +130,9 @@ export function ChatScreen({ initialConversationId }: { initialConversationId?: 
   const canChat = flags.chat_enabled && account?.status === 'active' && !flags.maintenance_mode;
   const canSend = canChat && usageAvailable;
 
-  const load = useCallback(async (id: string) => {
-    setLoading(true);
+  const sendingRef = useRef(false);
+  const load = useCallback(async (id: string, showLoading = true) => {
+    if (showLoading) setLoading(true);
     try {
       const data = await fetchConversation(id);
       setConversationId(data.conversation.id);
@@ -132,7 +142,7 @@ export function ChatScreen({ initialConversationId }: { initialConversationId?: 
     } catch (loadError) {
       setError(friendlyError(loadError, 'Could not load this conversation.'));
     } finally {
-      setLoading(false);
+      if (showLoading) setLoading(false);
     }
   }, []);
 
@@ -141,7 +151,21 @@ export function ChatScreen({ initialConversationId }: { initialConversationId?: 
     return () => abortRef.current?.abort();
   }, [initialConversationId, load]);
 
-  useEffect(() => { void fetchUsageState().then((state) => { setAllowedModes(state.allowed_modes); setUsageAvailable(state.can_send); setUsageResetAt(state.next_free_reset_at); }).catch(() => setAllowedModes(['auto'])); }, []);
+  useEffect(() => { sendingRef.current = sending; }, [sending]);
+
+  useEffect(() => {
+    if (!conversationId) return;
+    const supabase = getSupabase();
+    const reconcile = () => { if (!sendingRef.current) void load(conversationId, false); };
+    const channel = supabase.channel(`conversation-${conversationId}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'jela_conversations', filter: `id=eq.${conversationId}` }, reconcile)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'jela_messages', filter: `conversation_id=eq.${conversationId}` }, reconcile)
+      .subscribe();
+    const appState = AppState.addEventListener('change', (state) => { if (state === 'active') reconcile(); });
+    return () => { appState.remove(); void supabase.removeChannel(channel); };
+  }, [conversationId, load]);
+
+  useEffect(() => { void fetchUsageState().then((state) => { setAllowedModes(state.allowed_modes); setUsageAvailable(state.can_send); setUsageResetAt(state.next_free_reset_at); }).catch(() => setAllowedModes(['auto'])); }, [account?.updated_at]);
 
   const runRequest = async (messageText: string, requestId: string, attachmentIds: string[]) => {
     setSending(true);
@@ -211,18 +235,56 @@ export function ChatScreen({ initialConversationId }: { initialConversationId?: 
     if (!canSend) { setError(usageResetAt ? 'Your Free usage will reset automatically after the time shown on the Usage page.' : 'Usage is not available for this account right now.'); return; }
     const parsed = chatInputSchema.safeParse(input);
     if (!parsed.success) { setError(parsed.error.issues[0]?.message ?? 'Write a message first.'); return; }
+    if (attachments.some((item) => item.status !== 'ready')) {
+      setError('Wait for each attachment to finish uploading, retry it, or remove it.');
+      return;
+    }
     await runRequest(parsed.data, createRequestId(), attachments.map((item) => item.id));
   };
 
-  const attach = async () => {
-    setUploading(true);
+  const uploadDraft = async (localId: string, picked: PickedAttachment) => {
     try {
-      const record = await pickAndUploadAttachment(conversationId);
-      if (record) setAttachments((current) => [...current, { id: record.id, file_name: record.file_name }]);
+      const record = await uploadAttachment(picked, conversationId);
+      setAttachments((current) => current.map((item) => item.id === localId ? {
+        ...item,
+        id: record.id,
+        file_name: record.file_name,
+        storage_path: record.storage_path,
+        status: 'ready',
+        error: undefined,
+      } : item));
     } catch (attachmentError) {
-      setError(friendlyError(attachmentError, 'Could not upload this file.'));
-    } finally {
-      setUploading(false);
+      const message = friendlyError(attachmentError, 'Could not upload this file.');
+      setAttachments((current) => current.map((item) => item.id === localId ? { ...item, status: 'failed', error: message } : item));
+    }
+  };
+
+  const attach = async () => {
+    setPickingAttachment(true); setError(null);
+    try {
+      const picked = await pickAttachment();
+      if (!picked) return;
+      const localId = `attachment-${Date.now()}-${Math.random()}`;
+      setAttachments((current) => [...current, { id: localId, file_name: picked.name, status: 'uploading', picked }]);
+      void uploadDraft(localId, picked);
+    } catch (attachmentError) {
+      setError(friendlyError(attachmentError, 'Could not select this file.'));
+    } finally { setPickingAttachment(false); }
+  };
+
+  const retryAttachment = (item: AttachmentDraft) => {
+    const localId = `attachment-retry-${createRequestId()}`;
+    setAttachments((current) => current.map((entry) => entry.id === item.id ? { ...entry, id: localId, status: 'uploading', error: undefined } : entry));
+    void uploadDraft(localId, item.picked);
+  };
+
+  const removeAttachment = async (item: AttachmentDraft) => {
+    setAttachments((current) => current.filter((entry) => entry.id !== item.id));
+    if (item.status !== 'ready' || !item.storage_path) return;
+    try { await removeUploadedAttachment(item.id, item.storage_path); }
+    catch (caught) {
+      setAttachments((current) => [...current, item]);
+      setError(friendlyError(caught, 'Could not remove this attachment.'));
     }
   };
 
@@ -271,14 +333,16 @@ export function ChatScreen({ initialConversationId }: { initialConversationId?: 
             {!usageAvailable ? <AppText tone="accent" variant="caption">Usage limit reached. Open Usage to see the next available reset.</AppText> : null}
             {attachments.map((item) => (
               <View key={item.id} style={{ flexDirection: 'row', alignItems: 'center', gap: 8, alignSelf: 'flex-start', backgroundColor: colors.surface, borderRadius: radius.pill, paddingHorizontal: 11, paddingVertical: 6 }}>
-                <AppText variant="caption" numberOfLines={1} style={{ maxWidth: 250 }}>{item.file_name}</AppText>
-                <Pressable accessibilityLabel={`Remove ${item.file_name}`} onPress={() => setAttachments((current) => current.filter((entry) => entry.id !== item.id))}><X color={colors.textMuted} size={16} /></Pressable>
+                {item.status === 'uploading' ? <ActivityIndicator color={colors.primary} size="small" /> : null}
+                <View style={{ maxWidth: 250 }}><AppText variant="caption" numberOfLines={1}>{item.file_name}</AppText>{item.status === 'failed' ? <AppText tone="danger" variant="caption">Upload failed</AppText> : null}</View>
+                {item.status === 'failed' ? <Pressable accessibilityLabel={`Retry ${item.file_name}`} onPress={() => retryAttachment(item)}><RefreshCw color={colors.primary} size={16} /></Pressable> : null}
+                <Pressable accessibilityLabel={`Remove ${item.file_name}`} onPress={() => void removeAttachment(item)}><X color={colors.textMuted} size={16} /></Pressable>
               </View>
             ))}
             <View style={{ flexDirection: 'row', alignItems: 'flex-end', gap: 8 }}>
               {flags.attachments_enabled && account?.status === 'active' ? (
-                <Pressable accessibilityLabel="Attach a file" accessibilityRole="button" disabled={uploading || sending} onPress={attach} style={{ padding: 11 }}>
-                  {uploading ? <ActivityIndicator color={colors.primary} /> : <Paperclip color={colors.text} />}
+                <Pressable accessibilityLabel="Attach a file" accessibilityRole="button" disabled={pickingAttachment || sending} onPress={attach} style={{ padding: 11 }}>
+                  {pickingAttachment ? <ActivityIndicator color={colors.primary} /> : <Paperclip color={colors.text} />}
                 </Pressable>
               ) : null}
               <TextInput

@@ -1,21 +1,47 @@
 import { AlertCircle, CheckCircle2, Copy, Download, FileCheck2, ShieldCheck, Smartphone } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { ButtonLink } from '../components/ButtonLink'
 import { PageIntro } from '../components/PageIntro'
 import { Seo } from '../components/Seo'
 import { formatFileSize, getCurrentAndroidRelease, type ReleaseResult } from '../lib/releases'
+import { webSupabase } from '../lib/supabase'
+import { canonicalUrl } from '../lib/seo'
 
 export default function DownloadPage() {
   const [result, setResult] = useState<ReleaseResult | null>(null)
   const [copied, setCopied] = useState(false)
+
+  const refresh = useCallback(async () => {
+    const nextResult = await getCurrentAndroidRelease()
+    setResult(nextResult)
+  }, [])
 
   useEffect(() => {
     let active = true
     getCurrentAndroidRelease().then((nextResult) => {
       if (active) setResult(nextResult)
     })
-    return () => { active = false }
-  }, [])
+    if (!webSupabase) return () => { active = false }
+    const channel = webSupabase.channel('website-current-android-release')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'jela_ai_releases', filter: 'platform=eq.android' }, () => void refresh())
+      .subscribe()
+    const onVisibility = () => { if (document.visibilityState === 'visible') void refresh() }
+    document.addEventListener('visibilitychange', onVisibility)
+    return () => { active = false; document.removeEventListener('visibilitychange', onVisibility); void webSupabase?.removeChannel(channel) }
+  }, [refresh])
+
+  const structuredData = useMemo(() => result?.status === 'available' ? {
+    '@context': 'https://schema.org',
+    '@type': 'SoftwareApplication',
+    name: 'Jela AI',
+    applicationCategory: 'ProductivityApplication',
+    operatingSystem: 'Android',
+    softwareVersion: result.release.version_name,
+    datePublished: result.release.published_at,
+    fileSize: result.release.file_size ? `${result.release.file_size} bytes` : undefined,
+    downloadUrl: canonicalUrl('/download'),
+    publisher: { '@type': 'Organization', name: 'Zentel Insight' },
+  } : null, [result])
 
   const copyChecksum = async (checksum: string) => {
     await navigator.clipboard.writeText(checksum)
@@ -29,6 +55,7 @@ export default function DownloadPage() {
         title="Download Jela AI"
         description="Get the official Jela AI Android APK, release details, checksum and clear installation guidance."
         path="/download"
+        structuredData={structuredData}
       />
       <PageIntro
         eyebrow="Official Android distribution"
@@ -86,9 +113,9 @@ export default function DownloadPage() {
             ) : (
               <div className="release-state" role="status">
                 <span className="release-state__icon"><Smartphone /></span>
-                <p className="eyebrow eyebrow--green">Release preparation</p>
-                <h2>Jela AI for Android is being prepared for release.</h2>
-                <p>No public APK has been marked as current yet. When the verified build is ready, its version, file details, release notes and download action will appear here automatically.</p>
+                <p className="eyebrow eyebrow--green">Official release status</p>
+                <h2>No verified public Android release is available right now.</h2>
+                <p>This page will update automatically as soon as Zentel Insight marks a tested APK as the current official release.</p>
                 <ButtonLink href="/docs/getting-started" variant="neutral">Read getting started</ButtonLink>
               </div>
             )}

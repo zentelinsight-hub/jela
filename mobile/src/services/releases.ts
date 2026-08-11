@@ -30,7 +30,7 @@ export async function fetchLatestAndroidRelease() {
     if (signed.error) throw signed.error;
     release = { ...(data as Omit<AppRelease, 'download_url'>), download_url: signed.data.signedUrl };
   }
-  const installedVersion = Application.nativeApplicationVersion ?? '1.0.0';
+  const installedVersion = Application.nativeApplicationVersion ?? '1.1.0';
   return {
     installedVersion,
     release,

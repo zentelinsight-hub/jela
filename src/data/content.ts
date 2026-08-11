@@ -130,7 +130,7 @@ export const faqs = [
   {
     question: 'Is the Android application available now?',
     answer:
-      'The download page always reflects the current release state. If no APK has been published yet, it will clearly say that the Android application is being prepared rather than presenting a dead or unverified link.',
+      'The official download page reads the current verified APK from Jela AI’s production release service and shows its version and integrity details.',
   },
   {
     question: 'Why might Android ask me to allow installation?',

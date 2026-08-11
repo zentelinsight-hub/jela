@@ -64,7 +64,7 @@ Email/password authentication is implemented. Google and GitHub controls are hid
 
 - Application ID: `com.zentelinsight.jela`
 - Deep-link scheme: `jela`
-- Initial version: `1.0.0`
+- Current release candidate: `1.1.0` (`versionCode` 2)
 - Initial Android version code: `1`
 - Build profiles: `development`, `preview`, and `production-apk`
 

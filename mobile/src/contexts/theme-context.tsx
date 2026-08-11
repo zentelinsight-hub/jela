@@ -2,12 +2,16 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
   createContext,
   type PropsWithChildren,
+  useCallback,
   useContext,
   useEffect,
   useMemo,
   useState,
 } from 'react';
-import { Appearance, useColorScheme } from 'react-native';
+import { AppState, Appearance, useColorScheme } from 'react-native';
+
+import { useAuth } from '@/contexts/auth-context';
+import { getSupabase } from '@/lib/supabase';
 
 import {
   darkPalette,
@@ -28,16 +32,51 @@ type ThemeContextValue = {
 const ThemeContext = createContext<ThemeContextValue | null>(null);
 
 export function ThemeProvider({ children }: PropsWithChildren) {
+  const { session } = useAuth();
   const systemScheme = useColorScheme();
   const [preference, setPreferenceState] = useState<ThemePreference>('system');
+
+  const applyPreference = useCallback((next: ThemePreference) => {
+    setPreferenceState(next);
+    Appearance.setColorScheme(next === 'system' ? 'unspecified' : next);
+  }, []);
+
+  const reconcile = useCallback(async () => {
+    if (!session) return;
+    const { data, error } = await getSupabase()
+      .from('jela_user_settings')
+      .select('appearance')
+      .eq('user_id', session.user.id)
+      .maybeSingle();
+    if (!error && (data?.appearance === 'system' || data?.appearance === 'light' || data?.appearance === 'dark')) {
+      applyPreference(data.appearance);
+      await AsyncStorage.setItem(preferenceKey, data.appearance);
+    }
+  }, [applyPreference, session]);
 
   useEffect(() => {
     AsyncStorage.getItem(preferenceKey).then((stored) => {
       if (stored === 'system' || stored === 'light' || stored === 'dark') {
-        setPreferenceState(stored);
+        applyPreference(stored);
       }
     });
-  }, []);
+  }, [applyPreference]);
+
+  useEffect(() => { void reconcile(); }, [reconcile]);
+
+  useEffect(() => {
+    if (!session) return;
+    const supabase = getSupabase();
+    const channel = supabase.channel(`appearance-${session.user.id}`)
+      .on('postgres_changes', {
+        event: '*', schema: 'public', table: 'jela_user_settings', filter: `user_id=eq.${session.user.id}`,
+      }, () => void reconcile())
+      .subscribe();
+    const appState = AppState.addEventListener('change', (state) => {
+      if (state === 'active') void reconcile();
+    });
+    return () => { appState.remove(); void supabase.removeChannel(channel); };
+  }, [reconcile, session]);
 
   const resolved: 'light' | 'dark' =
     preference === 'system' ? (systemScheme === 'light' ? 'light' : 'dark') : preference;
@@ -48,12 +87,23 @@ export function ThemeProvider({ children }: PropsWithChildren) {
       resolved,
       colors: resolved === 'dark' ? darkPalette : lightPalette,
       setPreference: async (nextPreference) => {
-        setPreferenceState(nextPreference);
+        const previous = preference;
+        applyPreference(nextPreference);
         await AsyncStorage.setItem(preferenceKey, nextPreference);
-        Appearance.setColorScheme(nextPreference === 'system' ? 'unspecified' : nextPreference);
+        if (!session) return;
+        const { error } = await getSupabase().from('jela_user_settings').upsert({
+          user_id: session.user.id,
+          appearance: nextPreference,
+          updated_at: new Date().toISOString(),
+        }, { onConflict: 'user_id' });
+        if (error) {
+          applyPreference(previous);
+          await AsyncStorage.setItem(preferenceKey, previous);
+          throw error;
+        }
       },
     }),
-    [preference, resolved],
+    [applyPreference, preference, resolved, session],
   );
 
   return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;

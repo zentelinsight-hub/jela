@@ -1,4 +1,4 @@
-import { createClient } from '@supabase/supabase-js'
+import { webSupabase } from './supabase'
 
 export type AndroidRelease = {
   id: string
@@ -18,16 +18,10 @@ export type ReleaseResult =
   | { status: 'error' }
 
 export async function getCurrentAndroidRelease(): Promise<ReleaseResult> {
-  const url = import.meta.env.VITE_SUPABASE_URL
-  const publishableKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY
-
-  if (!url || !publishableKey) return { status: 'empty' }
+  if (!webSupabase) return { status: 'empty' }
 
   try {
-    const supabase = createClient(url, publishableKey, {
-      auth: { persistSession: false, autoRefreshToken: false },
-    })
-    const { data, error } = await supabase
+    const { data, error } = await webSupabase
       .from('jela_ai_releases')
       .select(
         'id, version_name, version_code, storage_path, file_size, sha256, release_notes, published_at, minimum_supported_version',
@@ -39,7 +33,7 @@ export async function getCurrentAndroidRelease(): Promise<ReleaseResult> {
     if (error) return { status: 'error' }
     if (!data) return { status: 'empty' }
 
-    const { data: signedUrlData, error: signedUrlError } = await supabase.storage
+    const { data: signedUrlData, error: signedUrlError } = await webSupabase.storage
       .from('jela-ai-releases')
       .createSignedUrl(data.storage_path, 15 * 60, {
         download: `jela-ai-v${data.version_name}.apk`,

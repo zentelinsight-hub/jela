@@ -42,12 +42,12 @@ function NavigationRoot() {
 
 export default function RootLayout() {
   return (
-    <ThemeProvider>
-      <AuthProvider>
+    <AuthProvider>
+      <ThemeProvider>
         <FeatureProvider>
           <NavigationRoot />
         </FeatureProvider>
-      </AuthProvider>
-    </ThemeProvider>
+      </ThemeProvider>
+    </AuthProvider>
   );
 }

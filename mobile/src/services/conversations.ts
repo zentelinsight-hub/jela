@@ -41,3 +41,13 @@ export async function archiveConversation(id: string) {
     .eq('id', id);
   if (error) throw error;
 }
+
+export async function renameConversation(id: string, title: string) {
+  const normalized = title.trim();
+  if (!normalized || normalized.length > 160) throw new Error('Use a conversation title between 1 and 160 characters.');
+  const { error } = await getSupabase()
+    .from('jela_conversations')
+    .update({ title: normalized, updated_at: new Date().toISOString() })
+    .eq('id', id);
+  if (error) throw error;
+}

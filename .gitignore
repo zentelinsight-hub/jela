@@ -11,6 +11,7 @@ node_modules
 dist
 dist-ssr
 mobile/dist-phase3-android/
+mobile/dist-phase4/
 *.local
 .env
 .env.*

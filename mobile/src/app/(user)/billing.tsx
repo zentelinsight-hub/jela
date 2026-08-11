@@ -1,6 +1,6 @@
 import * as Linking from 'expo-linking';
 import { useEffect, useState } from 'react';
-import { View } from 'react-native';
+import { AppState, View } from 'react-native';
 
 import { AppText } from '@/components/app-text';
 import { Button } from '@/components/button';
@@ -11,23 +11,37 @@ import { formatDate, formatMoney } from '@/lib/format';
 import { friendlyError } from '@/lib/errors';
 import { fetchBillingRecords, fetchSubscription } from '@/services/commerce';
 import type { Subscription } from '@/types/database';
+import { useAuth } from '@/contexts/auth-context';
+import { getSupabase } from '@/lib/supabase';
 
 type BillingRow = { id: string; amount_minor: number; currency: string; status: string; description: string | null; created_at: string; receipt_url: string | null };
 
 export default function BillingScreen() {
+  const { user } = useAuth();
   const [subscription, setSubscription] = useState<Subscription | null>(null);
   const [records, setRecords] = useState<BillingRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const load = async () => {
-    setLoading(true);
+  const load = async (showLoading = true) => {
+    if (showLoading) setLoading(true);
     try {
       const [nextSubscription, nextRecords] = await Promise.all([fetchSubscription(), fetchBillingRecords()]);
       setSubscription(nextSubscription); setRecords(nextRecords as BillingRow[]); setError(null);
     } catch (loadError) { setError(friendlyError(loadError, 'Could not load billing.')); }
-    finally { setLoading(false); }
+    finally { if (showLoading) setLoading(false); }
   };
   useEffect(() => { void load(); }, []);
+  useEffect(() => {
+    if (!user) return;
+    const supabase = getSupabase();
+    const refresh = () => void load(false);
+    const channel = supabase.channel(`billing-${user.id}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'jela_subscriptions', filter: `user_id=eq.${user.id}` }, refresh)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'jela_billing_records', filter: `user_id=eq.${user.id}` }, refresh)
+      .subscribe();
+    const appState = AppState.addEventListener('change', (state) => { if (state === 'active') refresh(); });
+    return () => { appState.remove(); void supabase.removeChannel(channel); };
+  }, [user]);
   return (
     <PageScreen title="Billing" subtitle="Subscription and receipts">
       {loading ? <LoadingState /> : error ? <ErrorState message={error} onRetry={() => void load()} /> : (

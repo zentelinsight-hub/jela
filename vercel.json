@@ -1,0 +1,24 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "cleanUrls": true,
+  "rewrites": [
+    { "source": "/", "destination": "/index.html" },
+    { "source": "/features", "destination": "/index.html" },
+    { "source": "/pricing", "destination": "/index.html" },
+    { "source": "/download", "destination": "/index.html" },
+    { "source": "/docs", "destination": "/index.html" },
+    { "source": "/docs/getting-started", "destination": "/index.html" },
+    { "source": "/docs/account-and-security", "destination": "/index.html" },
+    { "source": "/docs/using-jela", "destination": "/index.html" },
+    { "source": "/docs/files-and-analysis", "destination": "/index.html" },
+    { "source": "/docs/plans-and-credits", "destination": "/index.html" },
+    { "source": "/docs/privacy-and-data", "destination": "/index.html" },
+    { "source": "/about", "destination": "/index.html" },
+    { "source": "/contact", "destination": "/index.html" },
+    { "source": "/faq", "destination": "/index.html" },
+    { "source": "/privacy", "destination": "/index.html" },
+    { "source": "/terms", "destination": "/index.html" },
+    { "source": "/email-verified", "destination": "/index.html" },
+    { "source": "/payment-return", "destination": "/index.html" }
+  ]
+}
