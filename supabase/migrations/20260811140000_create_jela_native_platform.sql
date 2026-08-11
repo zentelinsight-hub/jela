@@ -147,6 +147,7 @@ create table if not exists public.jela_credit_wallets (
   reserved bigint not null default 0 check (reserved >= 0 and reserved <= balance),
   lifetime_granted bigint not null default 0 check (lifetime_granted >= 0),
   lifetime_used bigint not null default 0 check (lifetime_used >= 0),
+  created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
 
@@ -381,6 +382,8 @@ grant select on public.jela_accounts, public.jela_account_roles, public.jela_con
   public.jela_model_config, public.jela_security_events, public.jela_audit_logs
 to authenticated;
 grant insert, update, delete on public.jela_conversations, public.jela_attachments to authenticated;
+grant select, insert, update, delete on public.jela_push_tokens to authenticated;
+grant select on public.jela_ai_releases to anon;
 grant all on all tables in schema public to service_role;
 
 create policy "Accounts are visible to their owner or admins"

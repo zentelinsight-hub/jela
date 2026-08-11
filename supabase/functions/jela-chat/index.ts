@@ -273,6 +273,16 @@ Deno.serve(async (request) => {
           }
           if (done) break;
         }
+        if (buffer.trim()) {
+          const event = parseSseBlock(buffer);
+          if (event?.type === 'response.output_text.delta' && typeof event.delta === 'string') {
+            output += event.delta;
+            controller.enqueue(encoder.encode(eventPayload({ type: 'delta', delta: event.delta })));
+          } else if (event?.type === 'response.completed') {
+            inputTokens = event.response?.usage?.input_tokens ?? inputTokens;
+            outputTokens = event.response?.usage?.output_tokens ?? outputTokens;
+          }
+        }
         if (!output.trim()) throw new Error('empty_provider_response');
 
         const complete = await serviceClient.rpc('complete_jela_chat_request', {
