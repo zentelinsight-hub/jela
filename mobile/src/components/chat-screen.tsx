@@ -115,8 +115,11 @@ export function ChatScreen({ initialConversationId }: { initialConversationId?: 
   const [uploading, setUploading] = useState(false);
   const [mode, setMode] = useState<'auto' | 'deep_think' | 'research'>('auto');
   const [allowedModes, setAllowedModes] = useState<('auto' | 'deep_think' | 'research')[]>(['auto']);
+  const [usageAvailable, setUsageAvailable] = useState(true);
+  const [usageResetAt, setUsageResetAt] = useState<string | null>(null);
   const [lastRequest, setLastRequest] = useState<{ message: string; requestId: string; attachmentIds: string[] } | null>(null);
   const canChat = flags.chat_enabled && account?.status === 'active' && !flags.maintenance_mode;
+  const canSend = canChat && usageAvailable;
 
   const load = useCallback(async (id: string) => {
     setLoading(true);
@@ -138,7 +141,7 @@ export function ChatScreen({ initialConversationId }: { initialConversationId?: 
     return () => abortRef.current?.abort();
   }, [initialConversationId, load]);
 
-  useEffect(() => { void fetchUsageState().then((state) => setAllowedModes(state.allowed_modes)).catch(() => setAllowedModes(['auto'])); }, []);
+  useEffect(() => { void fetchUsageState().then((state) => { setAllowedModes(state.allowed_modes); setUsageAvailable(state.can_send); setUsageResetAt(state.next_free_reset_at); }).catch(() => setAllowedModes(['auto'])); }, []);
 
   const runRequest = async (messageText: string, requestId: string, attachmentIds: string[]) => {
     setSending(true);
@@ -205,6 +208,7 @@ export function ChatScreen({ initialConversationId }: { initialConversationId?: 
   };
 
   const submit = async () => {
+    if (!canSend) { setError(usageResetAt ? 'Your Free usage will reset automatically after the time shown on the Usage page.' : 'Usage is not available for this account right now.'); return; }
     const parsed = chatInputSchema.safeParse(input);
     if (!parsed.success) { setError(parsed.error.issues[0]?.message ?? 'Write a message first.'); return; }
     await runRequest(parsed.data, createRequestId(), attachments.map((item) => item.id));
@@ -264,6 +268,7 @@ export function ChatScreen({ initialConversationId }: { initialConversationId?: 
         {canChat ? (
           <View style={{ borderTopWidth: 1, borderTopColor: colors.border, backgroundColor: colors.background, paddingHorizontal: 12, paddingTop: 10, paddingBottom: 8, gap: 8 }}>
             <View style={{ flexDirection: 'row', gap: 8 }}>{allowedModes.map((item) => <Pressable key={item} onPress={() => { setMode(item); void Haptics.selectionAsync(); }} style={{ paddingHorizontal: 11, paddingVertical: 6, borderRadius: 999, backgroundColor: mode === item ? colors.primary : colors.surface }}><AppText variant="caption" style={mode === item ? { color: '#FFFFFF' } : undefined}>{item === 'auto' ? 'Auto' : item === 'deep_think' ? 'Deep Think' : 'Research'}</AppText></Pressable>)}</View>
+            {!usageAvailable ? <AppText tone="accent" variant="caption">Usage limit reached. Open Usage to see the next available reset.</AppText> : null}
             {attachments.map((item) => (
               <View key={item.id} style={{ flexDirection: 'row', alignItems: 'center', gap: 8, alignSelf: 'flex-start', backgroundColor: colors.surface, borderRadius: radius.pill, paddingHorizontal: 11, paddingVertical: 6 }}>
                 <AppText variant="caption" numberOfLines={1} style={{ maxWidth: 250 }}>{item.file_name}</AppText>
@@ -285,15 +290,15 @@ export function ChatScreen({ initialConversationId }: { initialConversationId?: 
                 selectionColor={colors.primary}
                 value={input}
                 onChangeText={setInput}
-                editable={!sending}
+                editable={!sending && usageAvailable}
                 style={{ flex: 1, maxHeight: 140, minHeight: 48, borderRadius: radius.lg, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surface, color: colors.text, fontSize: 16, paddingHorizontal: 15, paddingVertical: 12 }}
               />
               <Pressable
                 accessibilityLabel={sending ? 'Sending message' : 'Send message'}
                 accessibilityRole="button"
-                disabled={!sending && !input.trim()}
+                disabled={!sending && (!input.trim() || !canSend)}
                 onPress={() => sending ? abortRef.current?.abort() : void submit()}
-                style={{ width: 48, height: 48, alignItems: 'center', justifyContent: 'center', borderRadius: radius.pill, backgroundColor: colors.primary, opacity: sending || !input.trim() ? 0.45 : 1 }}
+                style={{ width: 48, height: 48, alignItems: 'center', justifyContent: 'center', borderRadius: radius.pill, backgroundColor: colors.primary, opacity: sending || !input.trim() || !canSend ? 0.45 : 1 }}
               >
                 {sending ? <X color="#FFFFFF" size={21} /> : <Send color="#FFFFFF" size={21} />}
               </Pressable>
