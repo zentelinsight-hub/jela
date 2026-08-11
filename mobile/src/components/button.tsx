@@ -37,7 +37,7 @@ export function Button({
       accessibilityRole="button"
       disabled={isDisabled}
       {...props}
-      style={({ pressed }) => [
+      style={(state) => [
         {
           minHeight: 48,
           alignItems: 'center',
@@ -45,12 +45,12 @@ export function Button({
           borderRadius: radius.md,
           borderWidth: 1,
           paddingHorizontal: 18,
-          opacity: isDisabled ? 0.48 : pressed ? 0.78 : 1,
+          opacity: isDisabled ? 0.48 : state.pressed ? 0.78 : 1,
           width: fullWidth ? '100%' : undefined,
           backgroundColor: scheme.background,
           borderColor: scheme.border,
         },
-        typeof style === 'function' ? style({ pressed }) : style,
+        typeof style === 'function' ? style(state) : style,
       ]}
     >
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>

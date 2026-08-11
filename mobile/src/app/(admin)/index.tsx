@@ -23,6 +23,7 @@ import { PageScreen } from '@/components/page-screen';
 import { SectionCard } from '@/components/section-card';
 import { SettingRow } from '@/components/setting-row';
 import { useAppTheme } from '@/contexts/theme-context';
+import { friendlyError } from '@/lib/errors';
 import { fetchAdminOverview } from '@/services/admin';
 import type { AdminOverview } from '@/types/database';
 
@@ -50,7 +51,7 @@ export default function AdminHomeScreen() {
   const load = async () => {
     setLoading(true);
     try { setOverview(await fetchAdminOverview()); setError(null); }
-    catch (loadError) { setError(loadError instanceof Error ? loadError.message : 'Could not load the admin overview.'); }
+    catch (loadError) { setError(friendlyError(loadError, 'Could not load the admin overview.')); }
     finally { setLoading(false); }
   };
   useEffect(() => { void load(); }, []);

@@ -1,6 +1,8 @@
 import * as SecureStore from 'expo-secure-store';
+import { Platform } from 'react-native';
 
 const chunkSize = 1800;
+const volatileWebStorage = new Map<string, string>();
 
 async function clearChunks(key: string, count: number) {
   await Promise.all(
@@ -12,6 +14,7 @@ async function clearChunks(key: string, count: number) {
 
 export const secureStorage = {
   async getItem(key: string) {
+    if (Platform.OS === 'web') return volatileWebStorage.get(key) ?? null;
     const metadata = await SecureStore.getItemAsync(`${key}.meta`);
     if (!metadata) return null;
 
@@ -28,6 +31,10 @@ export const secureStorage = {
   },
 
   async setItem(key: string, value: string) {
+    if (Platform.OS === 'web') {
+      volatileWebStorage.set(key, value);
+      return;
+    }
     const oldMetadata = await SecureStore.getItemAsync(`${key}.meta`);
     const oldCount = Number(oldMetadata ?? 0);
     const chunks = value.match(new RegExp(`.{1,${chunkSize}}`, 'gs')) ?? [''];
@@ -53,6 +60,10 @@ export const secureStorage = {
   },
 
   async removeItem(key: string) {
+    if (Platform.OS === 'web') {
+      volatileWebStorage.delete(key);
+      return;
+    }
     const metadata = await SecureStore.getItemAsync(`${key}.meta`);
     const count = Number(metadata ?? 0);
     if (count > 0) await clearChunks(key, count);

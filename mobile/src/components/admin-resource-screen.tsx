@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { View } from 'react-native';
 
 import { AppText } from '@/components/app-text';
@@ -6,6 +6,7 @@ import { EmptyState, ErrorState, LoadingState } from '@/components/feedback-stat
 import { PageScreen } from '@/components/page-screen';
 import { SectionCard } from '@/components/section-card';
 import { formatDate } from '@/lib/format';
+import { friendlyError } from '@/lib/errors';
 import { fetchAdminRows } from '@/services/admin';
 
 function displayValue(value: unknown) {
@@ -34,13 +35,13 @@ export function AdminResourceScreen({
   const [rows, setRows] = useState<Record<string, unknown>[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const load = async () => {
+  const load = useCallback(async () => {
     setLoading(true);
     try { setRows(await fetchAdminRows(table, columns) as Record<string, unknown>[]); setError(null); }
-    catch (loadError) { setError(loadError instanceof Error ? loadError.message : `Could not load ${title.toLowerCase()}.`); }
+    catch (loadError) { setError(friendlyError(loadError, `Could not load ${title.toLowerCase()}.`)); }
     finally { setLoading(false); }
-  };
-  useEffect(() => { void load(); }, [table, columns]);
+  }, [columns, table, title]);
+  useEffect(() => { void load(); }, [load]);
   return (
     <PageScreen title={title} subtitle={subtitle}>
       {loading ? <LoadingState /> : error ? <ErrorState message={error} onRetry={() => void load()} /> : !rows.length ? (

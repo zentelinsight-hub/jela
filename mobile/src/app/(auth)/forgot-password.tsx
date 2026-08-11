@@ -8,6 +8,7 @@ import { AppText } from '@/components/app-text';
 import { Button } from '@/components/button';
 import { TextField } from '@/components/text-field';
 import { getSupabase } from '@/lib/supabase';
+import { authErrorMessage } from '@/lib/errors';
 import { emailSchema } from '@/lib/validation';
 
 export default function ForgotPasswordScreen() {
@@ -21,7 +22,7 @@ export default function ForgotPasswordScreen() {
     setLoading(true); setError(null);
     const result = await getSupabase().auth.resetPasswordForEmail(parsed.data, { redirectTo: Linking.createURL('reset-password') });
     setLoading(false);
-    if (result.error) setError(result.error.message);
+    if (result.error) setError(authErrorMessage(result.error, 'Could not send a reset link. Try again later.'));
     else setMessage('If that address belongs to an account, a secure reset link is on its way.');
   };
   return (

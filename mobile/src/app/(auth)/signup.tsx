@@ -9,6 +9,7 @@ import { BrandMark } from '@/components/brand-mark';
 import { Button } from '@/components/button';
 import { TextField } from '@/components/text-field';
 import { getSupabase } from '@/lib/supabase';
+import { authErrorMessage } from '@/lib/errors';
 import { firstIssue, signUpSchema } from '@/lib/validation';
 
 export default function SignUpScreen() {
@@ -32,7 +33,7 @@ export default function SignUpScreen() {
       },
     });
     setLoading(false);
-    if (signUpError) setError(signUpError.message);
+    if (signUpError) setError(authErrorMessage(signUpError, 'Account creation failed. Check your details and try again.'));
     else if (data.session) router.replace('/(user)');
     else router.replace({ pathname: '/(auth)/verify', params: { email: parsed.data.email } });
   };

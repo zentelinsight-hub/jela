@@ -8,6 +8,7 @@ import { EmptyState, ErrorState, LoadingState } from '@/components/feedback-stat
 import { PageScreen } from '@/components/page-screen';
 import { SectionCard } from '@/components/section-card';
 import { formatDate, formatMoney } from '@/lib/format';
+import { friendlyError } from '@/lib/errors';
 import { fetchBillingRecords, fetchSubscription } from '@/services/commerce';
 import type { Subscription } from '@/types/database';
 
@@ -23,7 +24,7 @@ export default function BillingScreen() {
     try {
       const [nextSubscription, nextRecords] = await Promise.all([fetchSubscription(), fetchBillingRecords()]);
       setSubscription(nextSubscription); setRecords(nextRecords as BillingRow[]); setError(null);
-    } catch (loadError) { setError(loadError instanceof Error ? loadError.message : 'Could not load billing.'); }
+    } catch (loadError) { setError(friendlyError(loadError, 'Could not load billing.')); }
     finally { setLoading(false); }
   };
   useEffect(() => { void load(); }, []);

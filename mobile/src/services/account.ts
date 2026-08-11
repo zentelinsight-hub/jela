@@ -42,8 +42,8 @@ export function accountStatusMessage(status?: AccountStatus | null) {
   if (status === 'suspended') {
     return 'This account is suspended. Contact Jela AI support if you think this is a mistake.';
   }
-  if (status === 'disabled') {
-    return 'This account has been disabled. Contact Jela AI support for assistance.';
+  if (status === 'deactivated') {
+    return 'This Jela AI account has been deactivated. Contact Jela AI support for assistance.';
   }
   return null;
 }

@@ -7,6 +7,7 @@ import { AppText } from '@/components/app-text';
 import { Button } from '@/components/button';
 import { TextField } from '@/components/text-field';
 import { getSupabase } from '@/lib/supabase';
+import { authErrorMessage } from '@/lib/errors';
 import { passwordSchema } from '@/lib/validation';
 
 export default function ResetPasswordScreen() {
@@ -22,7 +23,7 @@ export default function ResetPasswordScreen() {
     setLoading(true);
     const result = await getSupabase().auth.updateUser({ password });
     setLoading(false);
-    if (result.error) setError(result.error.message);
+    if (result.error) setError(authErrorMessage(result.error, 'Could not update the password. Request a new reset link and try again.'));
     else router.replace('/(user)');
   };
   return (

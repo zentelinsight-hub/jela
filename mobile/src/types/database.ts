@@ -1,4 +1,4 @@
-export type AccountStatus = 'active' | 'suspended' | 'disabled' | 'pending';
+export type AccountStatus = 'active' | 'restricted' | 'suspended' | 'deactivated';
 export type AppRole = 'user' | 'admin';
 export type MessageRole = 'user' | 'assistant' | 'system';
 export type MessageStatus = 'pending' | 'streaming' | 'complete' | 'failed';

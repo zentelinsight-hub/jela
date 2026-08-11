@@ -7,6 +7,7 @@ import { Button } from '@/components/button';
 import { PageScreen } from '@/components/page-screen';
 import { TextField } from '@/components/text-field';
 import { useAuth } from '@/contexts/auth-context';
+import { friendlyError } from '@/lib/errors';
 import { updateProfile } from '@/services/account';
 
 export default function ProfileScreen() {
@@ -31,7 +32,7 @@ export default function ProfileScreen() {
       await updateProfile({ firstName, lastName, displayName });
       await refreshAccount();
       setMessage('Profile saved.');
-    } catch (saveError) { setError(saveError instanceof Error ? saveError.message : 'Could not save your profile.'); }
+    } catch (saveError) { setError(friendlyError(saveError, 'Could not save your profile.')); }
     finally { setLoading(false); }
   };
 

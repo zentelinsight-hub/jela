@@ -1,5 +1,5 @@
 import { getSupabase } from '@/lib/supabase';
-import type { AdminOverview } from '@/types/database';
+import type { AccountStatus, AdminOverview } from '@/types/database';
 
 async function count(table: string, equality?: readonly [string, string]) {
   let request = getSupabase().from(table).select('*', { count: 'exact', head: true });
@@ -31,20 +31,14 @@ export async function fetchAdminRows(table: string, columns = '*') {
   return (data ?? []) as unknown[];
 }
 
-export async function suspendAccount(userId: string, reason: string) {
+export async function setAccountStatus(userId: string, status: AccountStatus, reason?: string | null) {
   const { error } = await getSupabase().rpc('admin_set_jela_account_status', {
     p_user_id: userId,
-    p_status: 'suspended',
-    p_reason: reason.trim(),
+    p_status: status,
+    p_reason: reason?.trim() || null,
   });
   if (error) throw error;
 }
 
-export async function restoreAccount(userId: string) {
-  const { error } = await getSupabase().rpc('admin_set_jela_account_status', {
-    p_user_id: userId,
-    p_status: 'active',
-    p_reason: null,
-  });
-  if (error) throw error;
-}
+export const suspendAccount = (userId: string, reason: string) => setAccountStatus(userId, 'suspended', reason);
+export const restoreAccount = (userId: string) => setAccountStatus(userId, 'active');

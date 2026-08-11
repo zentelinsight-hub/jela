@@ -1,7 +1,7 @@
 import type { Href } from 'expo-router';
 import { useRouter } from 'expo-router';
 import { Archive, MessageSquareText } from 'lucide-react-native';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { FlatList, Pressable, View } from 'react-native';
 
 import { AppText } from '@/components/app-text';
@@ -9,6 +9,7 @@ import { Button } from '@/components/button';
 import { EmptyState, ErrorState, LoadingState } from '@/components/feedback-state';
 import { useAppTheme } from '@/contexts/theme-context';
 import { formatDate } from '@/lib/format';
+import { friendlyError } from '@/lib/errors';
 import { archiveConversation, listConversations } from '@/services/conversations';
 import { radius } from '@/theme/tokens';
 import type { Conversation } from '@/types/database';
@@ -20,14 +21,14 @@ export function ConversationList({ query = '' }: { query?: string }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const load = async () => {
+  const load = useCallback(async () => {
     setLoading(true);
     try { setItems(await listConversations(query)); setError(null); }
-    catch (loadError) { setError(loadError instanceof Error ? loadError.message : 'Could not load your conversations.'); }
+    catch (loadError) { setError(friendlyError(loadError, 'Could not load your conversations.')); }
     finally { setLoading(false); }
-  };
+  }, [query]);
 
-  useEffect(() => { const timeout = setTimeout(() => void load(), query ? 250 : 0); return () => clearTimeout(timeout); }, [query]);
+  useEffect(() => { const timeout = setTimeout(() => void load(), query ? 250 : 0); return () => clearTimeout(timeout); }, [load, query]);
 
   if (loading) return <LoadingState label="Loading history…" />;
   if (error) return <ErrorState message={error} onRetry={() => void load()} />;
@@ -62,7 +63,7 @@ export function ConversationList({ query = '' }: { query?: string }) {
             onPress={async (event) => {
               event.stopPropagation();
               try { await archiveConversation(item.id); setItems((current) => current.filter((entry) => entry.id !== item.id)); }
-              catch (archiveError) { setError(archiveError instanceof Error ? archiveError.message : 'Could not archive this conversation.'); }
+              catch (archiveError) { setError(friendlyError(archiveError, 'Could not archive this conversation.')); }
             }}
             style={{ padding: 7 }}
           >

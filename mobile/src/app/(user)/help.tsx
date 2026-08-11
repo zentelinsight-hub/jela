@@ -19,7 +19,7 @@ export default function HelpScreen() {
           <AppText tone="muted">Jela AI can make mistakes. Review important facts and never share passwords, API keys, or highly sensitive personal information in a prompt.</AppText>
         </SectionCard>
         <SectionCard title="Account access">
-          <AppText tone="muted">Use “Forgot password?” on the sign-in screen. Suspended or disabled accounts must be reviewed by Zentel Insight support.</AppText>
+          <AppText tone="muted">Use “Forgot password?” on the sign-in screen. Suspended or deactivated Jela AI accounts must be reviewed by Zentel Insight support.</AppText>
         </SectionCard>
         <SectionCard title="Official downloads">
           <AppText tone="muted">Install Android updates only from the official Jela AI website. Review the published version and checksum before installation.</AppText>

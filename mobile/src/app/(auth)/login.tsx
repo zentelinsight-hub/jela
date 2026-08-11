@@ -10,6 +10,7 @@ import { BrandMark } from '@/components/brand-mark';
 import { Button } from '@/components/button';
 import { TextField } from '@/components/text-field';
 import { appConfig } from '@/lib/config';
+import { authErrorMessage } from '@/lib/errors';
 import { getSupabase } from '@/lib/supabase';
 import { emailSchema } from '@/lib/validation';
 
@@ -32,7 +33,7 @@ export default function LoginScreen() {
     setError(null);
     const result = await getSupabase().auth.signInWithPassword({ email: parsedEmail.data, password });
     setLoading(false);
-    if (result.error) setError(result.error.message);
+    if (result.error) setError(authErrorMessage(result.error, 'Sign-in failed. Check your details and try again.'));
     else router.replace('/(user)');
   };
 
@@ -43,7 +44,7 @@ export default function LoginScreen() {
       options: { redirectTo, skipBrowserRedirect: true },
     });
     if (oauthError || !data.url) {
-      setError(oauthError?.message ?? 'Could not open the identity provider.');
+      setError(authErrorMessage(oauthError, 'Could not open the identity provider.'));
       return;
     }
     const result = await WebBrowser.openAuthSessionAsync(data.url, redirectTo);
@@ -59,7 +60,7 @@ export default function LoginScreen() {
             <AppText variant="headline">Welcome back</AppText>
             <AppText tone="muted">Sign in to continue your conversations.</AppText>
           </View>
-          <TextField label="Email" value={email} onChangeText={setEmail} placeholder="you@example.com" keyboardType="email-address" autoComplete="email" />
+          <TextField label="Email" value={email} onChangeText={setEmail} placeholder="you@domain.com" keyboardType="email-address" autoComplete="email" />
           <TextField label="Password" value={password} onChangeText={setPassword} placeholder="Your password" secureTextEntry autoComplete="current-password" />
           {error ? <AppText tone="danger" variant="caption">{error}</AppText> : null}
           <Button fullWidth loading={loading} onPress={signIn}>Sign in</Button>

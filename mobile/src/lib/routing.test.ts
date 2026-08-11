@@ -7,6 +7,7 @@ describe('account routing', () => {
     expect(destinationForSession(false)).toBe('auth');
     expect(destinationForSession(true, 'active')).toBe('chat');
     expect(destinationForSession(true, 'suspended')).toBe('account-blocked');
-    expect(destinationForSession(true, 'disabled')).toBe('account-blocked');
+    expect(destinationForSession(true, 'deactivated')).toBe('account-blocked');
+    expect(destinationForSession(true, 'restricted')).toBe('chat');
   });
 });

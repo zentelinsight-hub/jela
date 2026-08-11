@@ -7,6 +7,6 @@ export function destinationForSession(
   status?: AccountStatus | null,
 ): SessionDestination {
   if (!hasSession) return 'auth';
-  if (status === 'suspended' || status === 'disabled') return 'account-blocked';
+  if (status === 'suspended' || status === 'deactivated') return 'account-blocked';
   return 'chat';
 }

@@ -1,6 +1,7 @@
 import * as Crypto from 'expo-crypto';
 
 import { appConfig } from '@/lib/config';
+import { UserMessageError } from '@/lib/errors';
 import { getSupabase } from '@/lib/supabase';
 
 export type ChatStreamEvent =
@@ -49,11 +50,11 @@ export async function streamJelaResponse(
   onEvent: (event: ChatStreamEvent) => void,
   signal?: AbortSignal,
 ) {
-  if (!appConfig) throw new Error('Jela AI is not connected to its backend yet.');
+  if (!appConfig) throw new UserMessageError('Jela AI is not connected to its backend yet.');
   const supabase = getSupabase();
   const { data } = await supabase.auth.getSession();
   const token = data.session?.access_token;
-  if (!token) throw new Error('Your session expired. Sign in again.');
+  if (!token) throw new UserMessageError('Your session expired. Sign in again.');
 
   const response = await fetch(`${appConfig.supabaseUrl}/functions/v1/jela-chat`, {
     method: 'POST',
@@ -74,10 +75,10 @@ export async function streamJelaResponse(
 
   if (!response.ok) {
     const body = (await response.json().catch(() => null)) as { message?: string } | null;
-    throw new Error(body?.message ?? `The AI service returned ${response.status}.`);
+    throw new UserMessageError(body?.message ?? 'The AI service could not complete this request.');
   }
 
-  if (!response.body) throw new Error('Streaming is unavailable on this device.');
+  if (!response.body) throw new UserMessageError('Streaming is unavailable on this device.');
   const reader = response.body.getReader();
   const decoder = new TextDecoder();
   let buffer = '';

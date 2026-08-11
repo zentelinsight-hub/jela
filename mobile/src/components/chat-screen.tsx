@@ -18,8 +18,10 @@ import { AppText } from '@/components/app-text';
 import { Button } from '@/components/button';
 import { EmptyState, ErrorState, LoadingState } from '@/components/feedback-state';
 import { MenuSheet } from '@/components/menu-sheet';
+import { useAuth } from '@/contexts/auth-context';
 import { useFeatures } from '@/contexts/feature-context';
 import { useAppTheme } from '@/contexts/theme-context';
+import { friendlyError } from '@/lib/errors';
 import { chatInputSchema } from '@/lib/validation';
 import { pickAndUploadAttachment } from '@/services/attachments';
 import { createRequestId, streamJelaResponse } from '@/services/chat';
@@ -95,6 +97,7 @@ export function ChatScreen({ initialConversationId }: { initialConversationId?: 
   const router = useRouter();
   const { colors } = useAppTheme();
   const { flags, loading: featuresLoading } = useFeatures();
+  const { account } = useAuth();
   const listRef = useRef<FlashListRef<LocalMessage>>(null);
   const abortRef = useRef<AbortController | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -108,6 +111,7 @@ export function ChatScreen({ initialConversationId }: { initialConversationId?: 
   const [attachments, setAttachments] = useState<AttachmentDraft[]>([]);
   const [uploading, setUploading] = useState(false);
   const [lastRequest, setLastRequest] = useState<{ message: string; requestId: string; attachmentIds: string[] } | null>(null);
+  const canChat = flags.chat_enabled && account?.status === 'active' && !flags.maintenance_mode;
 
   const load = useCallback(async (id: string) => {
     setLoading(true);
@@ -118,7 +122,7 @@ export function ChatScreen({ initialConversationId }: { initialConversationId?: 
       setMessages(data.messages);
       setError(null);
     } catch (loadError) {
-      setError(loadError instanceof Error ? loadError.message : 'Could not load this conversation.');
+      setError(friendlyError(loadError, 'Could not load this conversation.'));
     } finally {
       setLoading(false);
     }
@@ -184,7 +188,7 @@ export function ChatScreen({ initialConversationId }: { initialConversationId?: 
             ? { ...item, status: 'failed' }
             : item,
         ));
-        setError(requestError instanceof Error ? requestError.message : 'The response could not be completed.');
+        setError(friendlyError(requestError, 'The response could not be completed.'));
       }
     } finally {
       setSending(false);
@@ -204,7 +208,7 @@ export function ChatScreen({ initialConversationId }: { initialConversationId?: 
       const record = await pickAndUploadAttachment(conversationId);
       if (record) setAttachments((current) => [...current, { id: record.id, file_name: record.file_name }]);
     } catch (attachmentError) {
-      setError(attachmentError instanceof Error ? attachmentError.message : 'Could not upload this file.');
+      setError(friendlyError(attachmentError, 'Could not upload this file.'));
     } finally {
       setUploading(false);
     }
@@ -223,8 +227,11 @@ export function ChatScreen({ initialConversationId }: { initialConversationId?: 
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={['top', 'bottom']}>
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined} keyboardVerticalOffset={0}>
         <AppHeader title={title} subtitle="Jela AI" onBack={initialConversationId ? () => router.back() : undefined} onMenu={initialConversationId ? undefined : () => setMenuOpen(true)} onNew={reset} />
-        {!flags.chat_enabled ? (
-          <EmptyState title="Chat is not enabled yet" message="The production AI model and credit policy must be configured by an administrator before messages can be sent. Your history and account remain available." />
+        {!canChat ? (
+          <EmptyState
+            title={account?.status === 'restricted' ? 'AI access is restricted' : flags.maintenance_mode ? 'Jela AI is under maintenance' : 'Chat is not enabled yet'}
+            message={account?.status === 'restricted' ? 'You can still review your account and history, but new prompts and uploads are blocked by the server until an administrator restores Active status.' : flags.maintenance_mode ? 'Your account and history remain safe. Try again after maintenance is complete.' : 'The production AI model and credit policy must be configured by an administrator before messages can be sent. Your history and account remain available.'}
+          />
         ) : messages.length === 0 ? (
           <EmptyState title="What can I help you think through?" message="Ask Jela AI a question, plan a project, or continue from your history." />
         ) : (
@@ -245,7 +252,7 @@ export function ChatScreen({ initialConversationId }: { initialConversationId?: 
         {error && messages.length > 0 ? (
           <View style={{ paddingHorizontal: 16, paddingVertical: 6 }}><AppText tone="danger" variant="caption">{error}</AppText></View>
         ) : null}
-        {flags.chat_enabled ? (
+        {canChat ? (
           <View style={{ borderTopWidth: 1, borderTopColor: colors.border, backgroundColor: colors.background, paddingHorizontal: 12, paddingTop: 10, paddingBottom: 8, gap: 8 }}>
             {attachments.map((item) => (
               <View key={item.id} style={{ flexDirection: 'row', alignItems: 'center', gap: 8, alignSelf: 'flex-start', backgroundColor: colors.surface, borderRadius: radius.pill, paddingHorizontal: 11, paddingVertical: 6 }}>
@@ -254,7 +261,7 @@ export function ChatScreen({ initialConversationId }: { initialConversationId?: 
               </View>
             ))}
             <View style={{ flexDirection: 'row', alignItems: 'flex-end', gap: 8 }}>
-              {flags.attachments_enabled ? (
+              {flags.attachments_enabled && account?.status === 'active' ? (
                 <Pressable accessibilityLabel="Attach a file" accessibilityRole="button" disabled={uploading || sending} onPress={attach} style={{ padding: 11 }}>
                   {uploading ? <ActivityIndicator color={colors.primary} /> : <Paperclip color={colors.text} />}
                 </Pressable>

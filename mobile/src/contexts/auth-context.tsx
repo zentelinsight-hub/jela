@@ -11,6 +11,7 @@ import {
 } from 'react';
 
 import { hasConfiguredBackend } from '@/lib/config';
+import { authErrorMessage, friendlyError } from '@/lib/errors';
 import { getSupabase } from '@/lib/supabase';
 import { fetchAccount, type AccountSnapshot } from '@/services/account';
 
@@ -54,7 +55,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
       setSnapshot(await fetchAccount(user));
       setError(null);
     } catch (accountError) {
-      setError(accountError instanceof Error ? accountError.message : 'Could not load this account.');
+      setError(friendlyError(accountError, 'Could not load this account.'));
     }
   }, []);
 
@@ -66,7 +67,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
 
     const supabase = getSupabase();
     supabase.auth.getSession().then(async ({ data, error: sessionError }) => {
-      if (sessionError) setError(sessionError.message);
+      if (sessionError) setError(authErrorMessage(sessionError, 'Could not restore your session. Sign in again.'));
       setSession(data.session);
       await loadAccount(data.session?.user ?? null);
       setLoading(false);

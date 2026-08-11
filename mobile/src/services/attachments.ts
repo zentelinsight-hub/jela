@@ -2,6 +2,7 @@ import * as DocumentPicker from 'expo-document-picker';
 import * as Crypto from 'expo-crypto';
 
 import { getSupabase } from '@/lib/supabase';
+import { UserMessageError } from '@/lib/errors';
 
 const maxBytes = 10 * 1024 * 1024;
 const allowedTypes = new Set([
@@ -22,14 +23,14 @@ export async function pickAndUploadAttachment(conversationId?: string | null) {
   const asset = result.assets[0];
   if (!asset) return null;
   if (!asset.mimeType || !allowedTypes.has(asset.mimeType)) {
-    throw new Error('Choose a PDF, text file, JPEG, PNG, or WebP image.');
+    throw new UserMessageError('Choose a PDF, text file, JPEG, PNG, or WebP image.');
   }
-  if ((asset.size ?? 0) > maxBytes) throw new Error('Attachments must be 10 MB or smaller.');
+  if ((asset.size ?? 0) > maxBytes) throw new UserMessageError('Attachments must be 10 MB or smaller.');
 
   const supabase = getSupabase();
   const { data: sessionData } = await supabase.auth.getSession();
   const userId = sessionData.session?.user.id;
-  if (!userId) throw new Error('Sign in again before uploading.');
+  if (!userId) throw new UserMessageError('Sign in again before uploading.');
 
   const extension = asset.name.split('.').pop()?.replace(/[^a-z0-9]/gi, '') || 'bin';
   const path = `${userId}/${Crypto.randomUUID()}.${extension}`;

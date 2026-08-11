@@ -28,7 +28,7 @@ export default function Index() {
   }
 
   if (!session) return <Redirect href="/(auth)/login" />;
-  if (account?.status === 'suspended' || account?.status === 'disabled') {
+  if (account?.status === 'suspended' || account?.status === 'deactivated') {
     return <Redirect href="/(user)/account-blocked" />;
   }
   return <Redirect href="/(user)" />;

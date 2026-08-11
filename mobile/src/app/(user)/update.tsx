@@ -12,6 +12,7 @@ import { useAppTheme } from '@/contexts/theme-context';
 import { fetchLatestAndroidRelease } from '@/services/releases';
 import type { AppRelease } from '@/types/database';
 import type { UpdateState } from '@/lib/version';
+import { friendlyError } from '@/lib/errors';
 
 type Result = { installedVersion: string; release: AppRelease | null; state: UpdateState };
 
@@ -23,7 +24,7 @@ export default function UpdateScreen() {
   const load = async () => {
     setLoading(true);
     try { setResult(await fetchLatestAndroidRelease()); setError(null); }
-    catch (loadError) { setError(loadError instanceof Error ? loadError.message : 'Could not check for updates.'); }
+    catch (loadError) { setError(friendlyError(loadError, 'Could not check for updates.')); }
     finally { setLoading(false); }
   };
   useEffect(() => { void load(); }, []);

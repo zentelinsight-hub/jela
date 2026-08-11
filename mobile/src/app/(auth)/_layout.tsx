@@ -8,6 +8,7 @@ export default function AuthLayout() {
   const { loading, session } = useAuth();
   const segments = useSegments();
   if (loading) return <AppScreen scroll={false}><LoadingState /></AppScreen>;
-  if (session && !segments.includes('reset-password')) return <Redirect href="/(user)" />;
+  const isResetPassword = (segments as string[]).includes('reset-password');
+  if (session && !isResetPassword) return <Redirect href="/(user)" />;
   return <Stack screenOptions={{ headerShown: false }} />;
 }

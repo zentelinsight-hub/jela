@@ -10,6 +10,7 @@ import { PageScreen } from '@/components/page-screen';
 import { SectionCard } from '@/components/section-card';
 import { useAppTheme } from '@/contexts/theme-context';
 import { formatMoney } from '@/lib/format';
+import { friendlyError } from '@/lib/errors';
 import { fetchPlans } from '@/services/commerce';
 import type { Plan } from '@/types/database';
 
@@ -21,7 +22,7 @@ export default function PlansScreen() {
   const load = async () => {
     setLoading(true);
     try { setPlans(await fetchPlans()); setError(null); }
-    catch (loadError) { setError(loadError instanceof Error ? loadError.message : 'Could not load plans.'); }
+    catch (loadError) { setError(friendlyError(loadError, 'Could not load plans.')); }
     finally { setLoading(false); }
   };
   useEffect(() => { void load(); }, []);

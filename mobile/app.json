@@ -4,13 +4,20 @@
     "slug": "jela-ai",
     "version": "1.0.0",
     "orientation": "default",
-    "icon": "./assets/brand/jela-ai-logo.png",
+    "icon": "./assets/brand/jela-ai-app-icon.png",
     "scheme": "jela",
     "userInterfaceStyle": "automatic",
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/78444994-02ae-41c9-9dd9-92047b702d59",
+      "fallbackToCacheTimeout": 0,
+      "checkAutomatically": "ON_LOAD"
+    },
     "android": {
       "package": "com.zentelinsight.jela",
       "versionCode": 1,
-      "edgeToEdgeEnabled": true,
       "softwareKeyboardLayoutMode": "resize",
       "predictiveBackGestureEnabled": true
     },
@@ -32,6 +39,13 @@
     ],
     "experiments": {
       "typedRoutes": true
-    }
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "78444994-02ae-41c9-9dd9-92047b702d59"
+      }
+    },
+    "owner": "zentelinsight"
   }
 }

@@ -9,6 +9,7 @@ import {
 } from 'react';
 
 import { useAuth } from '@/contexts/auth-context';
+import { friendlyError } from '@/lib/errors';
 import { fetchFeatureFlags } from '@/services/features';
 import type { FeatureFlags } from '@/types/database';
 
@@ -42,7 +43,7 @@ export function FeatureProvider({ children }: PropsWithChildren) {
       setFlags(await fetchFeatureFlags());
       setError(null);
     } catch (featureError) {
-      setError(featureError instanceof Error ? featureError.message : 'Could not load app features.');
+      setError(friendlyError(featureError, 'Could not load app features.'));
       setFlags(defaults);
     } finally {
       setLoading(false);

@@ -25,12 +25,11 @@ export function resolveUpdateState(
   installedVersion: string,
   latestVersion: string,
   minimumSupportedVersion?: string | null,
-  forceUpdate = false,
+  _forceUpdate = false,
 ): UpdateState {
   if (
-    (minimumSupportedVersion &&
-      compareVersions(installedVersion, minimumSupportedVersion) < 0) ||
-    (forceUpdate && compareVersions(installedVersion, latestVersion) < 0)
+    minimumSupportedVersion &&
+    compareVersions(installedVersion, minimumSupportedVersion) < 0
   ) {
     return 'required';
   }

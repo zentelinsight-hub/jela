@@ -13,6 +13,6 @@ describe('version policy', () => {
     expect(resolveUpdateState('1.0.0', '1.2.0', '1.1.0')).toBe('required');
     expect(resolveUpdateState('1.1.0', '1.2.0', '1.0.0')).toBe('available');
     expect(resolveUpdateState('1.2.0', '1.2.0', '1.0.0')).toBe('current');
-    expect(resolveUpdateState('1.1.0', '1.2.0', null, true)).toBe('required');
+    expect(resolveUpdateState('1.1.0', '1.2.0', null, true)).toBe('available');
   });
 });

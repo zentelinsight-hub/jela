@@ -9,6 +9,7 @@ import { SectionCard } from '@/components/section-card';
 import { useFeatures } from '@/contexts/feature-context';
 import { useAppTheme } from '@/contexts/theme-context';
 import { formatDate } from '@/lib/format';
+import { friendlyError } from '@/lib/errors';
 import { getSupabase } from '@/lib/supabase';
 
 type Attachment = { id: string; file_name: string; mime_type: string; size_bytes: number; created_at: string };
@@ -22,7 +23,7 @@ export default function AttachmentsScreen() {
   const load = async () => {
     setLoading(true);
     const { data, error: queryError } = await getSupabase().from('jela_attachments').select('id,file_name,mime_type,size_bytes,created_at').eq('status', 'ready').order('created_at', { ascending: false });
-    if (queryError) setError(queryError.message); else { setItems((data ?? []) as Attachment[]); setError(null); }
+    if (queryError) setError(friendlyError(queryError, 'Could not load attachments.')); else { setItems((data ?? []) as Attachment[]); setError(null); }
     setLoading(false);
   };
   useEffect(() => { if (flags.attachments_enabled) void load(); else setLoading(false); }, [flags.attachments_enabled]);

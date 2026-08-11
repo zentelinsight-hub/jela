@@ -1,8 +1,8 @@
 # Jela AI
 
-Jela AI is an intelligent companion being built by Zentel Insight for learning, research, creation and practical problem-solving. This repository contains Phase 1: the production public website and the foundation for official Android APK releases.
+Jela AI is an intelligent companion built by Zentel Insight for learning, research, creation and practical problem-solving. This repository contains the Phase 1 production public website and the Phase 2 native Android application and backend.
 
-The website deliberately has no account, authentication, web chat, billing dashboard or theme switcher. Those capabilities belong to the future native application.
+The website deliberately has no account, authentication, web chat, billing dashboard or theme switcher. Those capabilities live in the isolated native application under `mobile/`.
 
 ## Website setup
 
@@ -45,7 +45,12 @@ public/
   brand/            Official, unmodified Jela AI and Zentel Insight logos
   media/            Homepage video and mobile-only homepage slideshow assets
 supabase/
-  migrations/       Release metadata, RLS and APK storage configuration
+  migrations/       Release metadata, native data model, RLS, credits and storage
+  functions/        Authenticated server-only AI provider boundary
+mobile/
+  src/app/           Native Expo Router auth, user and admin route groups
+  src/components/    Native UI, virtualized Chat and app shells
+  src/services/      Supabase, streaming, release, billing and admin clients
 ```
 
 All required routes are declared in `src/App.tsx`. Browser-history hosting must fall back to `index.html`; `public/_redirects` provides that rule for compatible static hosts.
@@ -85,6 +90,21 @@ Release records retain previous versions for rollback. Publishing a release mean
 
 When no current row exists—or public Supabase variables have not been provided—the download page shows the intentional preparation state.
 
-## Future native application
+## Phase 2 native application
 
-The future Jela AI application is expected to use a native-style React Native/Expo architecture with application authentication, chat, files, voice, credits, plans and separate user/admin route groups. It is not simulated inside this website. The app will support light and dark appearance options; the public website remains permanently dark.
+The native application is documented in [`mobile/README.md`](mobile/README.md). It uses Expo SDK 57 and React Native 0.86.2 with secure Supabase authentication, separate auth/user/admin route groups, native Chat, persistent conversation history, backend-authoritative credits and account states, backend-driven commerce states, private attachment architecture, update enforcement, and the existing APK release system.
+
+Production features stay unavailable until their real backend configuration exists. The database therefore begins with no invented plan, price, model policy, credit grant, subscription, checkout result, APK, or current release. Chat, attachments, voice, and push flags default to false. This is an intentional production safety state, not placeholder functionality.
+
+Validate both products independently:
+
+```bash
+npm run lint
+npm run build
+
+cd mobile
+npm run typecheck
+npm run lint
+npm run test
+npx expo-doctor
+```
