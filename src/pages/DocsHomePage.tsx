@@ -17,7 +17,7 @@ export default function DocsHomePage() {
     <main className="docs-page">
       <Seo
         title="Documentation"
-        description="Read the official Jela AI documentation for getting started, security, files, plans, credits, privacy and responsible use."
+        description="Read the official Jela AI documentation for getting started, security, files, plans, usage, privacy and responsible use."
         path="/docs"
       />
       <DocsLayout>

@@ -13,11 +13,11 @@ export async function fetchFeatureFlags(): Promise<FeatureFlags> {
   const { data, error } = await getSupabase()
     .from('jela_app_config')
     .select('key,value')
-    .in('key', Object.keys(safeDefaults));
+    .in('key', [...Object.keys(safeDefaults), 'ai_maintenance_mode']);
 
   if (error) throw error;
   const values = Object.fromEntries(
     (data ?? []).map((entry) => [entry.key, entry.value === true]),
   );
-  return { ...safeDefaults, ...values };
+  return { ...safeDefaults, ...values, maintenance_mode: values.ai_maintenance_mode ?? values.maintenance_mode ?? false };
 }

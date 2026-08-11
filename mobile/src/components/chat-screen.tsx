@@ -1,13 +1,15 @@
 import { FlashList, type FlashListRef } from '@shopify/flash-list';
 import * as Clipboard from 'expo-clipboard';
+import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
-import { Check, Copy, Paperclip, RefreshCw, Send, X } from 'lucide-react-native';
+import { Check, Copy, Paperclip, RefreshCw, Send, Share2, ThumbsDown, ThumbsUp, X } from 'lucide-react-native';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
   Pressable,
+  Share,
   TextInput,
   View,
 } from 'react-native';
@@ -28,6 +30,7 @@ import { createRequestId, streamJelaResponse } from '@/services/chat';
 import { fetchConversation } from '@/services/conversations';
 import { radius } from '@/theme/tokens';
 import type { ChatMessage } from '@/types/database';
+import { fetchUsageState } from '@/services/credits';
 
 type LocalMessage = ChatMessage & { local?: boolean };
 type AttachmentDraft = { id: string; file_name: string };
@@ -47,7 +50,7 @@ function makeLocalMessage(role: 'user' | 'assistant', content: string, status: C
   };
 }
 
-function MessageRow({ message, onRetry }: { message: LocalMessage; onRetry?: () => void }) {
+function MessageRow({ message, onRetry, activityLabel }: { message: LocalMessage; onRetry?: () => void; activityLabel?: string }) {
   const { colors } = useAppTheme();
   const [copied, setCopied] = useState(false);
   const isUser = message.role === 'user';
@@ -64,7 +67,7 @@ function MessageRow({ message, onRetry }: { message: LocalMessage; onRetry?: () 
         }}
       >
         {!isUser ? <AppText variant="label" tone="success">Jela AI</AppText> : null}
-        <AppText selectable>{message.content || (message.status === 'streaming' ? 'Thinking…' : '')}</AppText>
+        <AppText selectable>{message.content || (message.status === 'streaming' ? activityLabel ?? 'Thinking…' : '')}</AppText>
         {message.status === 'streaming' ? <ActivityIndicator color={colors.primary} size="small" style={{ alignSelf: 'flex-start' }} /> : null}
         {message.status === 'failed' ? (
           <View style={{ gap: 8 }}>
@@ -73,7 +76,7 @@ function MessageRow({ message, onRetry }: { message: LocalMessage; onRetry?: () 
           </View>
         ) : null}
         {!isUser && message.content ? (
-          <Pressable
+          <View style={{ flexDirection: 'row', gap: 14, alignItems: 'center' }}><Pressable
             accessibilityLabel="Copy response"
             accessibilityRole="button"
             onPress={async () => {
@@ -86,7 +89,7 @@ function MessageRow({ message, onRetry }: { message: LocalMessage; onRetry?: () 
           >
             {copied ? <Check color={colors.success} size={15} /> : <Copy color={colors.textMuted} size={15} />}
             <AppText tone={copied ? 'success' : 'muted'} variant="caption">{copied ? 'Copied' : 'Copy'}</AppText>
-          </Pressable>
+          </Pressable><Pressable accessibilityLabel="Share response" onPress={() => void Share.share({ message: message.content })}><Share2 color={colors.textMuted} size={15} /></Pressable><Pressable accessibilityLabel="Helpful response" onPress={() => void Haptics.selectionAsync()}><ThumbsUp color={colors.textMuted} size={15} /></Pressable><Pressable accessibilityLabel="Unhelpful response" onPress={() => void Haptics.selectionAsync()}><ThumbsDown color={colors.textMuted} size={15} /></Pressable></View>
         ) : null}
       </View>
     </View>
@@ -110,6 +113,8 @@ export function ChatScreen({ initialConversationId }: { initialConversationId?: 
   const [error, setError] = useState<string | null>(null);
   const [attachments, setAttachments] = useState<AttachmentDraft[]>([]);
   const [uploading, setUploading] = useState(false);
+  const [mode, setMode] = useState<'auto' | 'deep_think' | 'research'>('auto');
+  const [allowedModes, setAllowedModes] = useState<('auto' | 'deep_think' | 'research')[]>(['auto']);
   const [lastRequest, setLastRequest] = useState<{ message: string; requestId: string; attachmentIds: string[] } | null>(null);
   const canChat = flags.chat_enabled && account?.status === 'active' && !flags.maintenance_mode;
 
@@ -133,6 +138,8 @@ export function ChatScreen({ initialConversationId }: { initialConversationId?: 
     return () => abortRef.current?.abort();
   }, [initialConversationId, load]);
 
+  useEffect(() => { void fetchUsageState().then((state) => setAllowedModes(state.allowed_modes)).catch(() => setAllowedModes(['auto'])); }, []);
+
   const runRequest = async (messageText: string, requestId: string, attachmentIds: string[]) => {
     setSending(true);
     setError(null);
@@ -151,7 +158,7 @@ export function ChatScreen({ initialConversationId }: { initialConversationId?: 
     abortRef.current = controller;
     try {
       await streamJelaResponse(
-        { message: messageText, conversationId, attachmentIds, requestId },
+        { message: messageText, conversationId, attachmentIds, requestId, mode },
         (event) => {
           if (event.type === 'accepted') {
             setConversationId(event.conversationId);
@@ -169,6 +176,7 @@ export function ChatScreen({ initialConversationId }: { initialConversationId?: 
                 : item,
             ));
           } else if (event.type === 'done') {
+            void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
             setMessages((current) => current.map((item) =>
               item.id === localAssistantId || item.id === canonicalAssistantId
                 ? { ...item, status: 'complete' }
@@ -242,6 +250,7 @@ export function ChatScreen({ initialConversationId }: { initialConversationId?: 
             renderItem={({ item }) => (
               <MessageRow
                 message={item}
+                activityLabel={mode === 'research' ? 'Researching…' : mode === 'deep_think' ? 'Thinking deeply…' : 'Thinking…'}
                 onRetry={item.status === 'failed' && lastRequest ? () => void runRequest(lastRequest.message, lastRequest.requestId, lastRequest.attachmentIds) : undefined}
               />
             )}
@@ -254,6 +263,7 @@ export function ChatScreen({ initialConversationId }: { initialConversationId?: 
         ) : null}
         {canChat ? (
           <View style={{ borderTopWidth: 1, borderTopColor: colors.border, backgroundColor: colors.background, paddingHorizontal: 12, paddingTop: 10, paddingBottom: 8, gap: 8 }}>
+            <View style={{ flexDirection: 'row', gap: 8 }}>{allowedModes.map((item) => <Pressable key={item} onPress={() => { setMode(item); void Haptics.selectionAsync(); }} style={{ paddingHorizontal: 11, paddingVertical: 6, borderRadius: 999, backgroundColor: mode === item ? colors.primary : colors.surface }}><AppText variant="caption" style={mode === item ? { color: '#FFFFFF' } : undefined}>{item === 'auto' ? 'Auto' : item === 'deep_think' ? 'Deep Think' : 'Research'}</AppText></Pressable>)}</View>
             {attachments.map((item) => (
               <View key={item.id} style={{ flexDirection: 'row', alignItems: 'center', gap: 8, alignSelf: 'flex-start', backgroundColor: colors.surface, borderRadius: radius.pill, paddingHorizontal: 11, paddingVertical: 6 }}>
                 <AppText variant="caption" numberOfLines={1} style={{ maxWidth: 250 }}>{item.file_name}</AppText>
@@ -270,7 +280,7 @@ export function ChatScreen({ initialConversationId }: { initialConversationId?: 
                 accessibilityLabel="Message Jela AI"
                 multiline
                 maxLength={8000}
-                placeholder="Message Jela AI"
+                placeholder="Ask Jela…"
                 placeholderTextColor={colors.textMuted}
                 selectionColor={colors.primary}
                 value={input}
@@ -281,11 +291,11 @@ export function ChatScreen({ initialConversationId }: { initialConversationId?: 
               <Pressable
                 accessibilityLabel={sending ? 'Sending message' : 'Send message'}
                 accessibilityRole="button"
-                disabled={sending || !input.trim()}
-                onPress={() => void submit()}
+                disabled={!sending && !input.trim()}
+                onPress={() => sending ? abortRef.current?.abort() : void submit()}
                 style={{ width: 48, height: 48, alignItems: 'center', justifyContent: 'center', borderRadius: radius.pill, backgroundColor: colors.primary, opacity: sending || !input.trim() ? 0.45 : 1 }}
               >
-                {sending ? <ActivityIndicator color="#FFFFFF" /> : <Send color="#FFFFFF" size={21} />}
+                {sending ? <X color="#FFFFFF" size={21} /> : <Send color="#FFFFFF" size={21} />}
               </Pressable>
             </View>
           </View>

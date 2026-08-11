@@ -1,7 +1,7 @@
-import { Link, useRouter } from 'expo-router';
-import * as Linking from 'expo-linking';
+import { Link, useRouter, type Href } from 'expo-router';
 import { useState } from 'react';
-import { View } from 'react-native';
+import { Pressable, View } from 'react-native';
+import { ChevronLeft } from 'lucide-react-native';
 
 import { AppScreen } from '@/components/app-screen';
 import { AppText } from '@/components/app-text';
@@ -11,9 +11,12 @@ import { TextField } from '@/components/text-field';
 import { getSupabase } from '@/lib/supabase';
 import { authErrorMessage } from '@/lib/errors';
 import { firstIssue, signUpSchema } from '@/lib/validation';
+import { appConfig } from '@/lib/config';
+import { useAppTheme } from '@/contexts/theme-context';
 
 export default function SignUpScreen() {
   const router = useRouter();
+  const { colors } = useAppTheme();
   const [form, setForm] = useState({ firstName: '', lastName: '', email: '', password: '', confirmPassword: '' });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -28,7 +31,7 @@ export default function SignUpScreen() {
       email: parsed.data.email,
       password: parsed.data.password,
       options: {
-        emailRedirectTo: Linking.createURL('verify'),
+        emailRedirectTo: `${appConfig?.websiteUrl ?? 'https://jela-ai-official.victorudofiah25.chatgpt.site'}/email-verified`,
         data: { first_name: parsed.data.firstName, last_name: parsed.data.lastName },
       },
     });
@@ -41,6 +44,7 @@ export default function SignUpScreen() {
   return (
     <AppScreen>
       <View style={{ gap: 16, maxWidth: 520, width: '100%', alignSelf: 'center' }}>
+        <Pressable accessibilityRole="button" accessibilityLabel="Back" onPress={() => router.replace('/welcome' as Href)}><ChevronLeft color={colors.text} /></Pressable>
         <BrandMark compact />
         <View><AppText variant="headline">Create your account</AppText><AppText tone="muted">Your Jela AI work stays connected across sessions.</AppText></View>
         <TextField label="First name" value={form.firstName} onChangeText={update('firstName')} autoCapitalize="words" autoComplete="given-name" />

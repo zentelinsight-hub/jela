@@ -33,7 +33,8 @@ export default function SettingsScreen() {
         <SettingRow title="Appearance" description="Theme follows your choice across launches" value={preference} icon={<Moon color={colors.textMuted} />} onPress={go('/(user)/appearance')} />
         {flags.attachments_enabled ? <SettingRow title="Attachments" description="Your private uploaded files" icon={<FileUp color={colors.textMuted} />} onPress={go('/(user)/attachments')} /> : null}
         <SettingRow title="App update" description="Check the official Android release" icon={<Download color={colors.textMuted} />} onPress={go('/(user)/update')} />
-        <SettingRow title="Notifications" description="Prepared for a future server-controlled rollout" value={flags.push_notifications_enabled ? 'Enabled' : 'Not available'} icon={<Bell color={colors.textMuted} />} />
+        <SettingRow title="Notifications" description="Server-controlled notification availability" value={flags.push_notifications_enabled ? 'Enabled' : 'Not available'} icon={<Bell color={colors.textMuted} />} onPress={go('/(user)/notifications')} />
+        <SettingRow title="Privacy & security" description="Sessions, private media, AI and payments" icon={<ShieldCheck color={colors.textMuted} />} onPress={go('/(user)/privacy-security')} />
         <SettingRow title="Help" description="Support and common questions" icon={<HelpCircle color={colors.textMuted} />} onPress={go('/(user)/help')} />
         <SettingRow title="About" description="Version and official brands" icon={<Info color={colors.textMuted} />} onPress={go('/(user)/about')} />
         {isAdmin ? <SettingRow title="Admin console" description="Server-authoritative operations" icon={<ShieldCheck color={colors.accent} />} onPress={go('/(admin)')} /> : null}

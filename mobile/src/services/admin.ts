@@ -42,3 +42,28 @@ export async function setAccountStatus(userId: string, status: AccountStatus, re
 
 export const suspendAccount = (userId: string, reason: string) => setAccountStatus(userId, 'suspended', reason);
 export const restoreAccount = (userId: string) => setAccountStatus(userId, 'active');
+
+export async function updateAdminConfig(key: string, value: unknown) {
+  const { error } = await getSupabase().rpc('admin_update_jela_app_config', {
+    p_key: key,
+    p_value: value,
+    p_reason: 'Updated from the native Jela Admin console',
+  });
+  if (error) throw error;
+}
+
+export async function fetchProviderHealth() {
+  const { data, error } = await getSupabase().functions.invoke('jela-admin-health', { body: {} });
+  if (error) throw error;
+  return data as { openai: 'configured' | 'unavailable'; paystack: 'configured' | 'unavailable' };
+}
+
+export async function setUserAiOverride(userId: string, usePlanDefaults: boolean, overrideConfig: Record<string, unknown>) {
+  const { error } = await getSupabase().rpc('admin_set_jela_user_override', {
+    p_user_id: userId,
+    p_use_plan_defaults: usePlanDefaults,
+    p_override_config: overrideConfig,
+    p_reason: 'Updated from the native Jela Admin account screen',
+  });
+  if (error) throw error;
+}

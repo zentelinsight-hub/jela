@@ -29,10 +29,10 @@
           "backgroundColor": "#050505",
           "dark": {
             "backgroundColor": "#050505",
-            "image": "./assets/brand/jela-ai-logo.png"
+            "image": "./assets/brand/jela-ai-app-icon.png"
           },
-          "image": "./assets/brand/jela-ai-logo.png",
-          "imageWidth": 220
+          "image": "./assets/brand/jela-ai-app-icon.png",
+          "imageWidth": 160
         }
       ],
       "expo-secure-store"

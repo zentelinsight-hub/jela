@@ -5,6 +5,7 @@ import { Link, NavLink, useLocation } from 'react-router-dom'
 const navigation = [
   { label: 'Home', href: '/' },
   { label: 'Features', href: '/features' },
+  { label: 'Pricing', href: '/pricing' },
   { label: 'Docs', href: '/docs' },
   { label: 'Download', href: '/download' },
   { label: 'About', href: '/about' },
@@ -31,7 +32,7 @@ export function Header() {
     <header className={`site-header ${onHome ? 'site-header--hero' : ''}`}>
       <div className="container site-header__inner">
         <Link className="brand" to="/" aria-label="Jela AI home" onClick={() => setOpen(false)}>
-          <img src="/brand/jela-ai-logo.png" alt="" width="42" height="42" />
+          <img src="/brand/jela-ai-mark.png" alt="" width="42" height="42" />
           <span>Jela AI</span>
         </Link>
 

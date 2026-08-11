@@ -2,19 +2,22 @@ import 'react-native-gesture-handler';
 
 import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
-import { useEffect } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { StatusBar } from 'expo-status-bar';
 
 import { AuthProvider, useAuth } from '@/contexts/auth-context';
 import { FeatureProvider } from '@/contexts/feature-context';
 import { ThemeProvider, useAppTheme } from '@/contexts/theme-context';
 import { UpdateGate } from '@/components/update-gate';
+import { LaunchSplash } from '@/components/launch-splash';
 
 void SplashScreen.preventAutoHideAsync();
 
 function NavigationRoot() {
   const { loading } = useAuth();
   const { colors, resolved } = useAppTheme();
+  const [showLaunchSplash, setShowLaunchSplash] = useState(true);
+  const finishSplash = useCallback(() => setShowLaunchSplash(false), []);
 
   useEffect(() => {
     if (!loading) void SplashScreen.hideAsync();
@@ -32,6 +35,7 @@ function NavigationRoot() {
           }}
         />
       </UpdateGate>
+      {!loading && showLaunchSplash ? <LaunchSplash onFinished={finishSplash} /> : null}
     </>
   );
 }

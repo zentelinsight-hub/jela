@@ -8,8 +8,8 @@
   "theme_color": "#000000",
   "icons": [
     {
-      "src": "/brand/jela-ai-logo.png",
-      "sizes": "1536x1024",
+      "src": "/brand/jela-ai-mark.png",
+      "sizes": "1536x1536",
       "type": "image/png",
       "purpose": "any"
     }

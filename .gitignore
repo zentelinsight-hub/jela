@@ -10,6 +10,7 @@ lerna-debug.log*
 node_modules
 dist
 dist-ssr
+mobile/dist-phase3-android/
 *.local
 .env
 .env.*

@@ -6,6 +6,7 @@ const groups = [
     title: 'Product',
     links: [
       ['Features', '/features'],
+      ['Pricing', '/pricing'],
       ['Download', '/download'],
     ],
   },
@@ -38,7 +39,7 @@ export function Footer() {
       <div className="container footer-grid">
         <div className="footer-brand">
           <Link className="brand" to="/" aria-label="Jela AI home">
-            <img src="/brand/jela-ai-logo.png" alt="" width="46" height="46" />
+            <img src="/brand/jela-ai-mark.png" alt="" width="46" height="46" />
             <span>Jela AI</span>
           </Link>
           <p>An intelligent companion for learning, research, creation and practical problem-solving.</p>
@@ -72,12 +73,6 @@ export function Footer() {
 
       <div className="container footer-bottom">
         <p>© {new Date().getFullYear()} Zentel Insight. All rights reserved.</p>
-        <Link className="powered-by" to="/about#zentel-insight">
-          <span>Powered by</span>
-          <span className="powered-by__logo">
-            <img src="/brand/zentel-insight-logo.jpg" alt="Zentel Insight" width="116" height="64" />
-          </span>
-        </Link>
       </div>
     </footer>
   )

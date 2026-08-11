@@ -16,6 +16,8 @@ const streamHeaders = {
 
 const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
+type JelaMode = 'auto' | 'deep_think' | 'research';
+
 type BeginResult = {
   replay: boolean;
   status: 'processing' | 'complete' | 'failed';
@@ -25,18 +27,30 @@ type BeginResult = {
   assistant_content?: string;
   provider?: string;
   model?: string;
+  mode?: JelaMode;
   system_prompt?: string;
+  reasoning_effort?: string;
+  tools?: Array<Record<string, unknown>>;
   max_output_tokens?: number;
+};
+
+type OpenAIResponse = {
+  id?: string;
+  usage?: {
+    input_tokens?: number;
+    input_tokens_details?: { cached_tokens?: number };
+    output_tokens?: number;
+  };
+  output?: Array<{ type?: string }>;
+  error?: { code?: string; message?: string };
 };
 
 type OpenAIEvent = {
   type?: string;
   delta?: string;
+  item?: { type?: string };
   error?: { code?: string; message?: string };
-  response?: {
-    usage?: { input_tokens?: number; output_tokens?: number };
-    error?: { code?: string; message?: string };
-  };
+  response?: OpenAIResponse;
 };
 
 function jsonResponse(status: number, body: Record<string, unknown>) {
@@ -48,19 +62,21 @@ function jsonResponse(status: number, body: Record<string, unknown>) {
 
 function publicError(message: string) {
   const mappings: Record<string, { status: number; code: string; message: string }> = {
-    account_unavailable: { status: 403, code: 'account_unavailable', message: 'This account cannot use Jela AI right now.' },
-    chat_not_enabled: { status: 503, code: 'chat_not_enabled', message: 'AI chat has not been enabled by Jela AI yet.' },
-    model_not_configured: { status: 503, code: 'model_not_configured', message: 'The production AI model is not configured yet.' },
-    insufficient_credits: { status: 402, code: 'insufficient_credits', message: 'You do not have enough available credits for this request.' },
+    account_unavailable: { status: 403, code: 'account_unavailable', message: 'This account cannot use Jela right now.' },
+    chat_not_enabled: { status: 503, code: 'chat_not_enabled', message: 'Jela is temporarily unavailable. Please try again shortly.' },
+    ai_maintenance: { status: 503, code: 'ai_maintenance', message: 'Jela is temporarily unavailable. Please try again shortly.' },
+    model_not_configured: { status: 503, code: 'model_not_configured', message: 'This Jela mode is temporarily unavailable.' },
+    mode_not_available: { status: 403, code: 'mode_not_available', message: 'This Jela mode is not available on your current plan.' },
+    usage_limit_reached: { status: 429, code: 'usage_limit_reached', message: "You've reached today's Free usage limit." },
     conversation_not_found: { status: 404, code: 'conversation_not_found', message: 'This conversation is unavailable.' },
     invalid_message: { status: 400, code: 'invalid_message', message: 'Write a message between 1 and 8,000 characters.' },
     invalid_attachment: { status: 400, code: 'invalid_attachment', message: 'One or more attachments are unavailable.' },
-    attachments_not_enabled: { status: 503, code: 'attachments_not_enabled', message: 'Attachments are not enabled.' },
+    attachments_not_enabled: { status: 503, code: 'attachments_not_enabled', message: 'File uploads are not available right now.' },
     too_many_attachments: { status: 400, code: 'too_many_attachments', message: 'Attach no more than five files.' },
-    idempotency_conflict: { status: 409, code: 'idempotency_conflict', message: 'This request identifier belongs to another operation.' },
+    idempotency_conflict: { status: 409, code: 'idempotency_conflict', message: 'This request was already used for another operation.' },
   };
   const match = Object.entries(mappings).find(([key]) => message.includes(key));
-  return match?.[1] ?? { status: 500, code: 'request_failed', message: 'Jela AI could not start this request.' };
+  return match?.[1] ?? { status: 500, code: 'request_failed', message: "Jela couldn't complete that request. Please try again." };
 }
 
 function eventPayload(value: Record<string, unknown>) {
@@ -87,6 +103,19 @@ async function safetyIdentifier(userId: string) {
   return Array.from(new Uint8Array(digest)).map((value) => value.toString(16).padStart(2, '0')).join('');
 }
 
+function countTools(response: OpenAIResponse | undefined) {
+  const output = response?.output ?? [];
+  const toolCalls = output
+    .map((item) => item.type ?? '')
+    .filter((type) => type.endsWith('_call'));
+  return {
+    toolCalls,
+    webSearchCount: toolCalls.filter((type) => type === 'web_search_call').length,
+    fileOperationCount: toolCalls.filter((type) => type === 'file_search_call').length,
+    imageOperationCount: toolCalls.filter((type) => type === 'image_generation_call').length,
+  };
+}
+
 Deno.serve(async (request) => {
   if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: corsHeaders });
   if (request.method !== 'POST') return jsonResponse(405, { code: 'method_not_allowed', message: 'Use POST.' });
@@ -104,11 +133,8 @@ Deno.serve(async (request) => {
   const anonKey = Deno.env.get('SUPABASE_ANON_KEY');
   const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
   const openAIKey = Deno.env.get('OPENAI_API_KEY');
-  if (!supabaseUrl || !anonKey || !serviceRoleKey) {
-    return jsonResponse(503, { code: 'backend_not_configured', message: 'The Jela AI backend is not configured.' });
-  }
-  if (!openAIKey) {
-    return jsonResponse(503, { code: 'provider_not_configured', message: 'The production AI provider is not configured yet.' });
+  if (!supabaseUrl || !anonKey || !serviceRoleKey || !openAIKey) {
+    return jsonResponse(503, { code: 'backend_not_configured', message: 'Jela is temporarily unavailable. Please try again shortly.' });
   }
 
   const userClient = createClient(supabaseUrl, anonKey, {
@@ -117,10 +143,10 @@ Deno.serve(async (request) => {
   });
   const { data: userData, error: userError } = await userClient.auth.getUser();
   if (userError || !userData.user) {
-    return jsonResponse(401, { code: 'invalid_session', message: 'Your session expired. Sign in again.' });
+    return jsonResponse(401, { code: 'invalid_session', message: 'Your session has expired. Sign in again to continue.' });
   }
 
-  let body: { message?: unknown; conversation_id?: unknown; attachment_ids?: unknown };
+  let body: { message?: unknown; conversation_id?: unknown; attachment_ids?: unknown; mode?: unknown };
   try {
     body = await request.json();
   } catch {
@@ -132,11 +158,11 @@ Deno.serve(async (request) => {
     : typeof body.conversation_id === 'string' && uuidPattern.test(body.conversation_id)
       ? body.conversation_id
       : undefined;
-  const attachmentIds = Array.isArray(body.attachment_ids)
-    ? body.attachment_ids.filter((value): value is string => typeof value === 'string' && uuidPattern.test(value))
-    : [];
-  if (!message || message.length > 8000 || conversationId === undefined) {
-    return jsonResponse(400, { code: 'invalid_request', message: 'Check the conversation and message, then try again.' });
+  const rawAttachments = Array.isArray(body.attachment_ids) ? body.attachment_ids : [];
+  const attachmentIds = rawAttachments.filter((value): value is string => typeof value === 'string' && uuidPattern.test(value));
+  const mode: JelaMode = body.mode === 'deep_think' || body.mode === 'research' ? body.mode : 'auto';
+  if (!message || message.length > 8000 || conversationId === undefined || attachmentIds.length !== rawAttachments.length) {
+    return jsonResponse(400, { code: 'invalid_request', message: 'Check your message and attachments, then try again.' });
   }
 
   const serviceClient = createClient(supabaseUrl, serviceRoleKey, {
@@ -147,114 +173,84 @@ Deno.serve(async (request) => {
     p_request_id: idempotencyKey,
     p_conversation_id: conversationId,
     p_message: message,
+    p_mode: mode,
     p_attachment_ids: attachmentIds,
   });
   if (begin.error) {
     const error = publicError(begin.error.message);
-    return jsonResponse(error.status, error);
+    return jsonResponse(error.status, { code: error.code, message: error.message });
   }
 
-  const context = begin.data as BeginResult;
-  const acceptedEvent = {
-    type: 'accepted',
-    conversationId: context.conversation_id,
-    userMessageId: context.user_message_id,
-    assistantMessageId: context.assistant_message_id,
+  const accepted = begin.data as BeginResult;
+  if (accepted.replay && accepted.status === 'complete') {
+    return new Response(
+      eventPayload({
+        type: 'accepted',
+        conversationId: accepted.conversation_id,
+        userMessageId: accepted.user_message_id,
+        assistantMessageId: accepted.assistant_message_id,
+        mode: accepted.mode ?? mode,
+        replay: true,
+      }) + eventPayload({ type: 'delta', delta: accepted.assistant_content ?? '' }) + eventPayload({ type: 'done' }),
+      { headers: streamHeaders },
+    );
+  }
+
+  const startedAt = Date.now();
+  const providerBody: Record<string, unknown> = {
+    model: accepted.model,
+    instructions: accepted.system_prompt,
+    input: message,
+    max_output_tokens: accepted.max_output_tokens,
+    stream: true,
+    store: false,
+    safety_identifier: await safetyIdentifier(userData.user.id),
   };
-  if (context.replay && context.status === 'complete') {
-    const replayStream = new ReadableStream({
-      start(controller) {
-        const encoder = new TextEncoder();
-        controller.enqueue(encoder.encode(eventPayload(acceptedEvent)));
-        if (context.assistant_content) {
-          controller.enqueue(encoder.encode(eventPayload({ type: 'delta', delta: context.assistant_content })));
-        }
-        controller.enqueue(encoder.encode(eventPayload({ type: 'done' })));
-        controller.close();
-      },
-    });
-    return new Response(replayStream, { headers: streamHeaders });
+  if (accepted.reasoning_effort && accepted.reasoning_effort !== 'none') {
+    providerBody.reasoning = { effort: accepted.reasoning_effort };
   }
-  if (context.replay && context.status === 'processing') {
-    return jsonResponse(409, {
-      code: 'request_in_progress',
-      message: 'This request is already being processed. Wait a moment and retry safely.',
-    });
-  }
-  if (context.provider !== 'openai' || !context.model || !context.max_output_tokens) {
-    await serviceClient.rpc('fail_jela_chat_request', {
-      p_user_id: userData.user.id,
-      p_request_id: idempotencyKey,
-      p_error_code: 'invalid_model_config',
-      p_error_message: 'The selected model configuration is incomplete.',
-      p_partial_content: '',
-    });
-    return jsonResponse(503, { code: 'model_not_configured', message: 'The production AI model is not configured correctly.' });
-  }
+  if (Array.isArray(accepted.tools) && accepted.tools.length > 0) providerBody.tools = accepted.tools;
 
-  const historyResult = await serviceClient
-    .from('jela_messages')
-    .select('role,content')
-    .eq('conversation_id', context.conversation_id)
-    .in('role', ['user', 'assistant'])
-    .eq('status', 'complete')
-    .order('created_at', { ascending: true })
-    .limit(80);
-  if (historyResult.error) {
-    await serviceClient.rpc('fail_jela_chat_request', {
-      p_user_id: userData.user.id,
-      p_request_id: idempotencyKey,
-      p_error_code: 'history_failed',
-      p_error_message: 'Conversation history could not be loaded.',
-      p_partial_content: '',
-    });
-    return jsonResponse(500, { code: 'history_failed', message: 'Jela AI could not load the conversation safely.' });
-  }
-
-  const providerResponse = await fetch('https://api.openai.com/v1/responses', {
+  const upstream = await fetch('https://api.openai.com/v1/responses', {
     method: 'POST',
-    headers: {
-      Authorization: `Bearer ${openAIKey}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      model: context.model,
-      instructions: context.system_prompt,
-      input: historyResult.data.map((entry) => ({ role: entry.role, content: entry.content })),
-      max_output_tokens: context.max_output_tokens,
-      stream: true,
-      store: false,
-      safety_identifier: await safetyIdentifier(userData.user.id),
-    }),
+    headers: { Authorization: `Bearer ${openAIKey}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify(providerBody),
   });
-
-  if (!providerResponse.ok || !providerResponse.body) {
+  if (!upstream.ok || !upstream.body) {
     await serviceClient.rpc('fail_jela_chat_request', {
       p_user_id: userData.user.id,
       p_request_id: idempotencyKey,
-      p_error_code: `provider_${providerResponse.status}`,
-      p_error_message: 'The AI provider rejected the request.',
+      p_error_code: `provider_${upstream.status}`,
+      p_error_message: 'The AI provider request did not start.',
       p_partial_content: '',
+      p_duration_ms: Date.now() - startedAt,
     });
-    return jsonResponse(502, { code: 'provider_unavailable', message: 'The AI service is temporarily unavailable. Try again later.' });
+    return jsonResponse(upstream.status === 429 ? 503 : 502, {
+      code: 'provider_unavailable',
+      message: 'Jela is temporarily unavailable. Your usage was not charged.',
+    });
   }
 
+  const encoder = new TextEncoder();
+  const decoder = new TextDecoder();
   const responseStream = new ReadableStream({
     async start(controller) {
-      const encoder = new TextEncoder();
-      const decoder = new TextDecoder();
-      const reader = providerResponse.body!.getReader();
+      controller.enqueue(encoder.encode(eventPayload({
+        type: 'accepted',
+        conversationId: accepted.conversation_id,
+        userMessageId: accepted.user_message_id,
+        assistantMessageId: accepted.assistant_message_id,
+        mode: accepted.mode ?? mode,
+      })));
+
       let buffer = '';
       let output = '';
-      let inputTokens = 0;
-      let outputTokens = 0;
-      let failed = false;
-      controller.enqueue(encoder.encode(eventPayload(acceptedEvent)));
-
+      let completedResponse: OpenAIResponse | undefined;
       try {
+        const reader = upstream.body!.getReader();
         while (true) {
-          const { done, value } = await reader.read();
-          buffer += decoder.decode(value, { stream: !done });
+          const { value, done } = await reader.read();
+          buffer += decoder.decode(value ?? new Uint8Array(), { stream: !done });
           const blocks = buffer.split(/\r?\n\r?\n/);
           buffer = blocks.pop() ?? '';
           for (const block of blocks) {
@@ -264,38 +260,36 @@ Deno.serve(async (request) => {
               output += event.delta;
               controller.enqueue(encoder.encode(eventPayload({ type: 'delta', delta: event.delta })));
             } else if (event.type === 'response.completed') {
-              inputTokens = event.response?.usage?.input_tokens ?? 0;
-              outputTokens = event.response?.usage?.output_tokens ?? 0;
+              completedResponse = event.response;
             } else if (event.type === 'response.failed' || event.type === 'error') {
-              failed = true;
               throw new Error(event.error?.code ?? event.response?.error?.code ?? 'provider_stream_failed');
             }
           }
           if (done) break;
         }
-        if (buffer.trim()) {
-          const event = parseSseBlock(buffer);
-          if (event?.type === 'response.output_text.delta' && typeof event.delta === 'string') {
-            output += event.delta;
-            controller.enqueue(encoder.encode(eventPayload({ type: 'delta', delta: event.delta })));
-          } else if (event?.type === 'response.completed') {
-            inputTokens = event.response?.usage?.input_tokens ?? inputTokens;
-            outputTokens = event.response?.usage?.output_tokens ?? outputTokens;
-          }
-        }
         if (!output.trim()) throw new Error('empty_provider_response');
 
+        const usage = completedResponse?.usage;
+        const tools = countTools(completedResponse);
         const complete = await serviceClient.rpc('complete_jela_chat_request', {
           p_user_id: userData.user.id,
           p_request_id: idempotencyKey,
           p_content: output,
-          p_input_tokens: inputTokens,
-          p_output_tokens: outputTokens,
+          p_input_tokens: usage?.input_tokens ?? 0,
+          p_cached_input_tokens: usage?.input_tokens_details?.cached_tokens ?? 0,
+          p_output_tokens: usage?.output_tokens ?? 0,
+          p_provider_request_id: completedResponse?.id ?? '',
+          p_tool_calls: tools.toolCalls,
+          p_web_search_count: tools.webSearchCount,
+          p_file_operation_count: tools.fileOperationCount,
+          p_image_operation_count: tools.imageOperationCount,
+          p_duration_ms: Date.now() - startedAt,
         });
         if (complete.error) throw new Error('usage_settlement_failed');
         controller.enqueue(encoder.encode(eventPayload({
           type: 'done',
-          usage: { inputTokens, outputTokens },
+          usageAvailable: complete.data?.usage_available ?? true,
+          nextFreeResetAt: complete.data?.next_free_reset_at ?? null,
         })));
       } catch (streamError) {
         const code = streamError instanceof Error ? streamError.message : 'provider_stream_failed';
@@ -303,13 +297,14 @@ Deno.serve(async (request) => {
           p_user_id: userData.user.id,
           p_request_id: idempotencyKey,
           p_error_code: code,
-          p_error_message: failed ? 'The AI provider stream failed.' : 'The response could not be settled.',
+          p_error_message: 'The provider response did not finish.',
           p_partial_content: output,
+          p_duration_ms: Date.now() - startedAt,
         });
         controller.enqueue(encoder.encode(eventPayload({
           type: 'error',
           code: 'response_incomplete',
-          message: 'The response stopped before it finished. Retry safely.',
+          message: "Jela couldn't complete that response. Your unfinished request was not charged.",
           retryable: true,
         })));
       } finally {

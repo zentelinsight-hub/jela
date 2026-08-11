@@ -50,7 +50,7 @@ export default function AboutPage() {
             <h2>Powered by Zentel Insight.</h2>
             <p>Jela AI is the product. Zentel Insight is the organisation building and powering it. That relationship guides product development, official distribution, documentation and support.</p>
             <div className="brand-relationship">
-              <span><img src="/brand/jela-ai-logo.png" alt="" />Jela AI<strong>Product</strong></span>
+              <span><img src="/brand/jela-ai-mark.png" alt="" />Jela AI<strong>Product</strong></span>
               <ArrowRight aria-hidden="true" />
               <span><Building2 />Zentel Insight<strong>Organisation</strong></span>
             </div>

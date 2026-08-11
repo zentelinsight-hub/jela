@@ -3,9 +3,8 @@ import type { Plan, Subscription } from '@/types/database';
 
 export async function fetchPlans(): Promise<Plan[]> {
   const { data, error } = await getSupabase()
-    .from('jela_plans')
+    .from('jela_public_plans')
     .select('*')
-    .eq('active', true)
     .order('sort_order');
   if (error) throw error;
   return (data ?? []) as Plan[];
@@ -31,4 +30,20 @@ export async function fetchBillingRecords() {
     .limit(100);
   if (error) throw error;
   return data ?? [];
+}
+
+export async function initializePlanPayment(planCode: string) {
+  const { data, error } = await getSupabase().functions.invoke('jela-payment-initialize', {
+    body: { plan_code: planCode },
+  });
+  if (error) throw error;
+  return data as { reference: string; authorizationUrl: string; accessCode: string; planName: string };
+}
+
+export async function verifyPlanPayment(reference: string) {
+  const { data, error } = await getSupabase().functions.invoke('jela-payment-verify', {
+    body: { reference },
+  });
+  if (error) throw error;
+  return data as { status: string; fulfilled: boolean };
 }

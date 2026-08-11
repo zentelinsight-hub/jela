@@ -49,7 +49,7 @@ export default function DownloadPage() {
               <div className="release-available" aria-live="polite">
                 <div className="release-card__header">
                   <div className="app-identity">
-                    <img src="/brand/jela-ai-logo.png" alt="" />
+                    <img src="/brand/jela-ai-mark.png" alt="" />
                     <div><span>Current release</span><h2>Jela AI {result.release.version_name}</h2></div>
                   </div>
                   <span className="verified-badge"><CheckCircle2 /> Verified metadata</span>

@@ -142,24 +142,24 @@ const articles: Record<string, Article> = {
     ],
   },
   'plans-and-credits': {
-    title: 'Plans & Credits',
-    description: 'A plain-language overview of the planned relationship between plans, usage and AI credits.',
+    title: 'Plans & usage',
+    description: 'A plain-language overview of plan access, usage availability, and reset behavior.',
     updated: 'August 11, 2026',
     sections: [
       {
-        id: 'why-credits', title: 'Why AI credits may be used', content: <>
-          <p>AI requests have real operating costs that vary by model and task. Jela AI may use credits to make usage understandable across capabilities with different resource requirements.</p>
+        id: 'why-credits', title: 'How usage is managed', content: <>
+          <p>AI requests have real operating costs that vary by model and task. Jela AI measures access securely on the server and shows a simple availability state without exposing internal model units.</p>
         </>,
       },
       {
         id: 'plans', title: 'Subscription plans', content: <>
           <p>Plans may define access to capabilities, included usage and renewal periods. No public prices or plan entitlements have been announced on this website.</p>
-          <div className="docs-callout"><Info /><p><strong>No invented pricing.</strong> Official prices, billing terms and credit rules will appear only after they have been approved and implemented.</p></div>
+          <div className="docs-callout"><Info /><p><strong>Authoritative pricing.</strong> Current prices and billing terms come from the production plan catalog. A plan cannot be purchased until secure checkout is enabled server-side.</p></div>
         </>,
       },
       {
         id: 'transparency', title: 'Usage transparency', content: <>
-          <p>The intended application experience will explain relevant balances and usage before they become confusing. Final credit expiry, rollover, purchase and refund rules will be documented with the released billing experience.</p>
+          <p>The application shows whether usage is available and when a Free-plan reset is scheduled. Internal model units, provider costs, and private allowance calculations are not exposed to customers.</p>
         </>,
       },
     ],

@@ -157,7 +157,7 @@ export default function HomePage() {
           </Reveal>
           <Reveal className="concept-panel">
             <div className="concept-panel__top">
-              <span className="concept-panel__brand"><img src="/brand/jela-ai-logo.png" alt="" /> Jela AI</span>
+              <span className="concept-panel__brand"><img src="/brand/jela-ai-mark.png" alt="" /> Jela AI</span>
               <span className="concept-panel__status"><span /> Thinking with context</span>
             </div>
             <div className="concept-message concept-message--user">
@@ -215,7 +215,7 @@ export default function HomePage() {
           </Reveal>
           <div className="android-mark" aria-hidden="true">
             <div className="android-mark__ring" />
-            <img src="/brand/jela-ai-logo.png" alt="" />
+            <img src="/brand/jela-ai-mark.png" alt="" />
           </div>
         </div>
       </section>

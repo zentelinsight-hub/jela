@@ -19,7 +19,7 @@ export default function AboutScreen() {
       <View style={{ alignItems: 'center', gap: 18 }}>
         <BrandMark showPartner />
         <SectionCard title="Think clearly. Move forward.">
-          <AppText tone="muted">Jela AI is a native Android assistant from Zentel Insight, built around secure accounts, persistent conversation history, transparent credits, and server-authoritative operations.</AppText>
+          <AppText tone="muted">Jela AI is a native Android assistant from Zentel Insight, built around secure accounts, persistent conversation history, and server-authoritative AI access.</AppText>
           <AppText variant="caption" tone="muted">Version {Application.nativeApplicationVersion ?? '1.0.0'} · code {Application.nativeBuildVersion ?? '1'}</AppText>
         </SectionCard>
         <Button variant="secondary" icon={<ExternalLink color={colors.text} size={18} />} onPress={() => Linking.openURL(website)}>Official website</Button>

@@ -95,6 +95,16 @@ export function AuthProvider({ children }: PropsWithChildren) {
     };
   }, [loadAccount]);
 
+  useEffect(() => {
+    if (!session) return;
+    const supabase = getSupabase();
+    const channel = supabase.channel(`account-${session.user.id}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'jela_accounts', filter: `id=eq.${session.user.id}` }, () => void loadAccount(session.user))
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'jela_subscriptions', filter: `user_id=eq.${session.user.id}` }, () => void loadAccount(session.user))
+      .subscribe();
+    return () => { void supabase.removeChannel(channel); };
+  }, [loadAccount, session]);
+
   const value = useMemo<AuthContextValue>(
     () => ({
       loading,

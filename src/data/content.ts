@@ -159,6 +159,6 @@ export const docsNavigation = [
   { slug: 'account-and-security', label: 'Account & Security', summary: 'Learn how application accounts and access are intended to work.' },
   { slug: 'using-jela', label: 'Using Jela AI', summary: 'Write useful prompts, refine answers and use Jela responsibly.' },
   { slug: 'files-and-analysis', label: 'Files & Analysis', summary: 'See how supported documents and visual context will be handled.' },
-  { slug: 'plans-and-credits', label: 'Plans & Credits', summary: 'Understand the planned role of plans, usage and AI credits.' },
+  { slug: 'plans-and-credits', label: 'Plans & usage', summary: 'Understand plan access, usage availability, and resets.' },
   { slug: 'privacy-and-data', label: 'Privacy & Data', summary: 'Review practical privacy principles and data choices.' },
 ]

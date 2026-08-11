@@ -12,6 +12,7 @@ import { useAuth } from '@/contexts/auth-context';
 import { friendlyError } from '@/lib/errors';
 import { fetchFeatureFlags } from '@/services/features';
 import type { FeatureFlags } from '@/types/database';
+import { getSupabase } from '@/lib/supabase';
 
 const defaults: FeatureFlags = {
   chat_enabled: false,
@@ -53,6 +54,15 @@ export function FeatureProvider({ children }: PropsWithChildren) {
   useEffect(() => {
     void refresh();
   }, [refresh]);
+
+  useEffect(() => {
+    if (!session) return;
+    const supabase = getSupabase();
+    const channel = supabase.channel('app-config-live')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'jela_app_config' }, () => void refresh())
+      .subscribe();
+    return () => { void supabase.removeChannel(channel); };
+  }, [refresh, session]);
 
   const value = useMemo(
     () => ({ flags, loading, error, refresh }),

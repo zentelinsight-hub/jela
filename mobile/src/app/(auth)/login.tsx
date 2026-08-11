@@ -1,8 +1,9 @@
-import { Link, useRouter } from 'expo-router';
+import { Link, useRouter, type Href } from 'expo-router';
 import * as Linking from 'expo-linking';
 import * as WebBrowser from 'expo-web-browser';
 import { useState } from 'react';
-import { KeyboardAvoidingView, Platform, View } from 'react-native';
+import { KeyboardAvoidingView, Platform, Pressable, View } from 'react-native';
+import { ChevronLeft } from 'lucide-react-native';
 
 import { AppScreen } from '@/components/app-screen';
 import { AppText } from '@/components/app-text';
@@ -13,11 +14,13 @@ import { appConfig } from '@/lib/config';
 import { authErrorMessage } from '@/lib/errors';
 import { getSupabase } from '@/lib/supabase';
 import { emailSchema } from '@/lib/validation';
+import { useAppTheme } from '@/contexts/theme-context';
 
 void WebBrowser.maybeCompleteAuthSession();
 
 export default function LoginScreen() {
   const router = useRouter();
+  const { colors } = useAppTheme();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -34,7 +37,7 @@ export default function LoginScreen() {
     const result = await getSupabase().auth.signInWithPassword({ email: parsedEmail.data, password });
     setLoading(false);
     if (result.error) setError(authErrorMessage(result.error, 'Sign-in failed. Check your details and try again.'));
-    else router.replace('/(user)');
+    else router.replace('/');
   };
 
   const socialSignIn = async (provider: 'google' | 'github') => {
@@ -55,7 +58,8 @@ export default function LoginScreen() {
     <AppScreen>
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1, justifyContent: 'center' }}>
         <View style={{ gap: 18, maxWidth: 520, width: '100%', alignSelf: 'center' }}>
-          <BrandMark showPartner />
+          <Pressable accessibilityRole="button" accessibilityLabel="Back" onPress={() => router.replace('/welcome' as Href)}><ChevronLeft color={colors.text} /></Pressable>
+          <BrandMark />
           <View style={{ gap: 5 }}>
             <AppText variant="headline">Welcome back</AppText>
             <AppText tone="muted">Sign in to continue your conversations.</AppText>
@@ -63,7 +67,7 @@ export default function LoginScreen() {
           <TextField label="Email" value={email} onChangeText={setEmail} placeholder="you@domain.com" keyboardType="email-address" autoComplete="email" />
           <TextField label="Password" value={password} onChangeText={setPassword} placeholder="Your password" secureTextEntry autoComplete="current-password" />
           {error ? <AppText tone="danger" variant="caption">{error}</AppText> : null}
-          <Button fullWidth loading={loading} onPress={signIn}>Sign in</Button>
+          <Button fullWidth loading={loading} onPress={signIn}>{loading ? 'Logging in…' : 'Log in'}</Button>
           <Link href="/(auth)/forgot-password" asChild>
             <Button variant="ghost" fullWidth>Forgot password?</Button>
           </Link>

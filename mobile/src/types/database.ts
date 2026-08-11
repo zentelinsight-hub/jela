@@ -9,6 +9,7 @@ export type JelaAccount = {
   last_name: string;
   display_name: string | null;
   avatar_url: string | null;
+  avatar_path: string | null;
   status: AccountStatus;
   created_at: string;
   updated_at: string;
@@ -52,9 +53,25 @@ export type Plan = {
   currency: string;
   price_minor: number;
   interval: 'month' | 'year' | 'one_time';
-  credits: number;
   features: string[];
-  checkout_url: string | null;
+  most_popular: boolean;
+  sort_order: number;
+  purchasable: boolean;
+};
+
+export type UsageState = {
+  plan_code: string;
+  plan_name: string;
+  price_minor: number;
+  currency: string;
+  billing_interval: string;
+  usage_available: boolean;
+  can_send: boolean;
+  next_free_reset_at: string | null;
+  subscription_status: string | null;
+  current_period_end: string | null;
+  allowed_modes: ('auto' | 'deep_think' | 'research')[];
+  features: Record<string, boolean>;
 };
 
 export type Subscription = {

@@ -12,7 +12,7 @@ export type ChatStreamEvent =
       assistantMessageId: string;
     }
   | { type: 'delta'; delta: string }
-  | { type: 'done'; usage?: { inputTokens: number; outputTokens: number } }
+  | { type: 'done'; usageAvailable?: boolean; resetAt?: string | null }
   | { type: 'error'; code: string; message: string; retryable: boolean };
 
 export type SendMessageInput = {
@@ -20,6 +20,7 @@ export type SendMessageInput = {
   conversationId?: string | null;
   attachmentIds?: string[];
   requestId?: string;
+  mode?: 'auto' | 'deep_think' | 'research';
 };
 
 export function createRequestId() {
@@ -69,6 +70,7 @@ export async function streamJelaResponse(
       message: input.message,
       conversation_id: input.conversationId ?? null,
       attachment_ids: input.attachmentIds ?? [],
+      mode: input.mode ?? 'auto',
     }),
     signal,
   });

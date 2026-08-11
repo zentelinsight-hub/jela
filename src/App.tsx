@@ -13,6 +13,9 @@ const AboutPage = lazy(() => import('./pages/AboutPage'))
 const ContactPage = lazy(() => import('./pages/ContactPage'))
 const FaqPage = lazy(() => import('./pages/FaqPage'))
 const LegalPage = lazy(() => import('./pages/LegalPage'))
+const PricingPage = lazy(() => import('./pages/PricingPage'))
+const EmailVerifiedPage = lazy(() => import('./pages/EmailVerifiedPage'))
+const PaymentReturnPage = lazy(() => import('./pages/PaymentReturnPage'))
 const NotFoundPage = lazy(() => import('./pages/NotFoundPage'))
 
 function RouteEffects() {
@@ -35,6 +38,9 @@ function App() {
           <Routes>
             <Route path="/" element={<HomePage />} />
             <Route path="/features" element={<FeaturesPage />} />
+            <Route path="/pricing" element={<PricingPage />} />
+            <Route path="/email-verified" element={<EmailVerifiedPage />} />
+            <Route path="/payment-return" element={<PaymentReturnPage />} />
             <Route path="/download" element={<DownloadPage />} />
             <Route path="/docs" element={<DocsHomePage />} />
             <Route path="/docs/:article" element={<DocsArticlePage />} />
