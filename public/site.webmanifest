@@ -1,0 +1,17 @@
+{
+  "name": "Jela AI",
+  "short_name": "Jela AI",
+  "description": "An intelligent companion for learning, research, creation and practical problem-solving.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#000000",
+  "theme_color": "#000000",
+  "icons": [
+    {
+      "src": "/brand/jela-ai-logo.png",
+      "sizes": "1536x1024",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}
