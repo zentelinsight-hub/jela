@@ -89,7 +89,7 @@ export type AppRelease = {
   version_name: string;
   version_code: number | null;
   minimum_supported_version: string | null;
-  storage_path: string;
+  storage_path: string | null;
   download_url: string;
   release_notes: string | null;
   force_update: boolean;
