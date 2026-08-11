@@ -1,0 +1,37 @@
+{
+  "expo": {
+    "name": "Jela AI",
+    "slug": "jela-ai",
+    "version": "1.0.0",
+    "orientation": "default",
+    "icon": "./assets/brand/jela-ai-logo.png",
+    "scheme": "jela",
+    "userInterfaceStyle": "automatic",
+    "android": {
+      "package": "com.zentelinsight.jela",
+      "versionCode": 1,
+      "edgeToEdgeEnabled": true,
+      "softwareKeyboardLayoutMode": "resize",
+      "predictiveBackGestureEnabled": true
+    },
+    "plugins": [
+      "expo-router",
+      [
+        "expo-splash-screen",
+        {
+          "backgroundColor": "#050505",
+          "dark": {
+            "backgroundColor": "#050505",
+            "image": "./assets/brand/jela-ai-logo.png"
+          },
+          "image": "./assets/brand/jela-ai-logo.png",
+          "imageWidth": 220
+        }
+      ],
+      "expo-secure-store"
+    ],
+    "experiments": {
+      "typedRoutes": true
+    }
+  }
+}

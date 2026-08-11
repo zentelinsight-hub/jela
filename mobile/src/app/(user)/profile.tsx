@@ -1,0 +1,52 @@
+import { useEffect, useState } from 'react';
+import { View } from 'react-native';
+
+import { AppText } from '@/components/app-text';
+import { BrandMark } from '@/components/brand-mark';
+import { Button } from '@/components/button';
+import { PageScreen } from '@/components/page-screen';
+import { TextField } from '@/components/text-field';
+import { useAuth } from '@/contexts/auth-context';
+import { updateProfile } from '@/services/account';
+
+export default function ProfileScreen() {
+  const { user, account, refreshAccount } = useAuth();
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
+  const [displayName, setDisplayName] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [message, setMessage] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    setFirstName(account?.first_name ?? '');
+    setLastName(account?.last_name ?? '');
+    setDisplayName(account?.display_name ?? '');
+  }, [account]);
+
+  const save = async () => {
+    if (firstName.trim().length < 2 || lastName.trim().length < 2) { setError('Enter your first and last name.'); return; }
+    setLoading(true); setError(null); setMessage(null);
+    try {
+      await updateProfile({ firstName, lastName, displayName });
+      await refreshAccount();
+      setMessage('Profile saved.');
+    } catch (saveError) { setError(saveError instanceof Error ? saveError.message : 'Could not save your profile.'); }
+    finally { setLoading(false); }
+  };
+
+  return (
+    <PageScreen title="Profile" subtitle="Your account details">
+      <View style={{ gap: 16, maxWidth: 560, width: '100%', alignSelf: 'center' }}>
+        <BrandMark compact />
+        <TextField label="First name" value={firstName} onChangeText={setFirstName} autoCapitalize="words" />
+        <TextField label="Last name" value={lastName} onChangeText={setLastName} autoCapitalize="words" />
+        <TextField label="Display name" value={displayName} onChangeText={setDisplayName} autoCapitalize="words" hint="Optional name shown inside Jela AI." />
+        <TextField label="Email" value={user?.email ?? ''} editable={false} hint="Email changes require a verified account flow and are not available here." />
+        {error ? <AppText tone="danger" variant="caption">{error}</AppText> : null}
+        {message ? <AppText tone="success" variant="caption">{message}</AppText> : null}
+        <Button loading={loading} onPress={save}>Save profile</Button>
+      </View>
+    </PageScreen>
+  );
+}

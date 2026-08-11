@@ -382,6 +382,11 @@ inspector_port = 8083
 # The Deno major version to use.
 deno_version = 2
 
+[functions.jela-chat]
+enabled = true
+verify_jwt = true
+entrypoint = "./functions/jela-chat/index.ts"
+
 # [edge_runtime.secrets]
 # secret_key = "env(SECRET_VALUE)"
 

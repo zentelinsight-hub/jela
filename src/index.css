@@ -121,17 +121,13 @@ p {
 }
 
 .site-header {
-  position: absolute;
+  position: fixed;
   inset: 0 0 auto;
   z-index: 50;
   height: var(--header-height);
   border-bottom: 1px solid var(--border);
   background: rgba(0, 0, 0, 0.88);
   backdrop-filter: blur(20px);
-}
-
-.site-header:not(.site-header--hero) {
-  position: fixed;
 }
 
 .site-header__inner {
