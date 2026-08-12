@@ -2,7 +2,7 @@
   "expo": {
     "name": "Jela AI",
     "slug": "jela-ai",
-    "version": "1.1.0",
+    "version": "1.2.0",
     "orientation": "default",
     "icon": "./assets/brand/jela-ai-app-icon.png",
     "scheme": "jela",
@@ -17,7 +17,7 @@
     },
     "android": {
       "package": "com.zentelinsight.jela",
-      "versionCode": 2,
+      "versionCode": 3,
       "adaptiveIcon": {
         "foregroundImage": "./assets/brand/jela-ai-foreground.png",
         "backgroundColor": "#050505"
@@ -39,7 +39,13 @@
           "imageWidth": 160
         }
       ],
-      "expo-secure-store"
+      "expo-secure-store",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Allow Jela AI to choose an image you want to analyze."
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true

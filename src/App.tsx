@@ -16,6 +16,9 @@ const LegalPage = lazy(() => import('./pages/LegalPage'))
 const PricingPage = lazy(() => import('./pages/PricingPage'))
 const EmailVerifiedPage = lazy(() => import('./pages/EmailVerifiedPage'))
 const PaymentReturnPage = lazy(() => import('./pages/PaymentReturnPage'))
+const HelpPage = lazy(() => import('./pages/HelpPage'))
+const ForgotPasswordPage = lazy(() => import('./pages/ForgotPasswordPage'))
+const ResetPasswordPage = lazy(() => import('./pages/ResetPasswordPage'))
 const NotFoundPage = lazy(() => import('./pages/NotFoundPage'))
 
 function RouteEffects() {
@@ -49,6 +52,9 @@ function App() {
             <Route path="/faq" element={<FaqPage />} />
             <Route path="/privacy" element={<LegalPage type="privacy" />} />
             <Route path="/terms" element={<LegalPage type="terms" />} />
+            <Route path="/help" element={<HelpPage />} />
+            <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+            <Route path="/reset-password" element={<ResetPasswordPage />} />
             <Route path="*" element={<NotFoundPage />} />
           </Routes>
         </Suspense>

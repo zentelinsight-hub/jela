@@ -1,9 +1,8 @@
 import { Link, useRouter, type Href } from 'expo-router';
-import * as Linking from 'expo-linking';
-import * as WebBrowser from 'expo-web-browser';
 import { useState } from 'react';
-import { KeyboardAvoidingView, Platform, Pressable, View } from 'react-native';
+import { Pressable, View } from 'react-native';
 import { ChevronLeft } from 'lucide-react-native';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 
 import { AppScreen } from '@/components/app-screen';
 import { AppText } from '@/components/app-text';
@@ -15,8 +14,10 @@ import { authErrorMessage } from '@/lib/errors';
 import { getSupabase } from '@/lib/supabase';
 import { emailSchema } from '@/lib/validation';
 import { useAppTheme } from '@/contexts/theme-context';
+import { continueWithGoogle } from '@/services/oauth';
+import { openWebsite } from '@/lib/website';
 
-void WebBrowser.maybeCompleteAuthSession();
+const GoogleMark = () => <AppText style={{ color: '#4285F4', fontWeight: '800' }}>G</AppText>;
 
 export default function LoginScreen() {
   const router = useRouter();
@@ -24,6 +25,7 @@ export default function LoginScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const signIn = async () => {
@@ -40,23 +42,16 @@ export default function LoginScreen() {
     else router.replace('/');
   };
 
-  const socialSignIn = async (provider: 'google' | 'github') => {
-    const redirectTo = Linking.createURL('callback');
-    const { data, error: oauthError } = await getSupabase().auth.signInWithOAuth({
-      provider,
-      options: { redirectTo, skipBrowserRedirect: true },
-    });
-    if (oauthError || !data.url) {
-      setError(authErrorMessage(oauthError, 'Could not open the identity provider.'));
-      return;
-    }
-    const result = await WebBrowser.openAuthSessionAsync(data.url, redirectTo);
-    if (result.type === 'success') await Linking.openURL(result.url);
+  const googleSignIn = async () => {
+    setGoogleLoading(true); setError(null);
+    try { await continueWithGoogle(); router.replace('/'); }
+    catch (caught) { setError(authErrorMessage(caught instanceof Error ? caught : null, 'Unable to sign in with Google. Please try again.')); }
+    finally { setGoogleLoading(false); }
   };
 
   return (
-    <AppScreen>
-      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1, justifyContent: 'center' }}>
+    <AppScreen scroll={false}>
+      <KeyboardAwareScrollView bottomOffset={24} contentContainerStyle={{ flexGrow: 1, justifyContent: 'center' }} keyboardShouldPersistTaps="handled">
         <View style={{ gap: 18, maxWidth: 520, width: '100%', alignSelf: 'center' }}>
           <Pressable accessibilityRole="button" accessibilityLabel="Back" onPress={() => router.replace('/welcome' as Href)}><ChevronLeft color={colors.text} /></Pressable>
           <BrandMark />
@@ -68,17 +63,14 @@ export default function LoginScreen() {
           <TextField label="Password" value={password} onChangeText={setPassword} placeholder="Your password" secureTextEntry autoComplete="current-password" />
           {error ? <AppText tone="danger" variant="caption">{error}</AppText> : null}
           <Button fullWidth loading={loading} onPress={signIn}>{loading ? 'Logging in…' : 'Log in'}</Button>
-          <Link href="/(auth)/forgot-password" asChild>
-            <Button variant="ghost" fullWidth>Forgot password?</Button>
-          </Link>
-          {appConfig?.enableGoogleAuth ? <Button variant="secondary" fullWidth onPress={() => socialSignIn('google')}>Continue with Google</Button> : null}
-          {appConfig?.enableGitHubAuth ? <Button variant="secondary" fullWidth onPress={() => socialSignIn('github')}>Continue with GitHub</Button> : null}
+          <Button variant="ghost" fullWidth onPress={() => void openWebsite('forgotPassword')}>Forgot password?</Button>
+          {appConfig?.enableGoogleAuth ? <Button accessibilityLabel="Continue with Google" variant="secondary" fullWidth icon={<GoogleMark />} loading={googleLoading} onPress={() => void googleSignIn()}>Continue with Google</Button> : null}
           <View style={{ flexDirection: 'row', justifyContent: 'center', gap: 5 }}>
             <AppText tone="muted">New to Jela AI?</AppText>
             <Link href="/(auth)/signup"><AppText tone="success" variant="label">Create an account</AppText></Link>
           </View>
         </View>
-      </KeyboardAvoidingView>
+      </KeyboardAwareScrollView>
     </AppScreen>
   );
 }

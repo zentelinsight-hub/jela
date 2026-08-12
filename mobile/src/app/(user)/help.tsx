@@ -1,4 +1,3 @@
-import * as Linking from 'expo-linking';
 import { ExternalLink, Mail } from 'lucide-react-native';
 import { View } from 'react-native';
 
@@ -7,11 +6,10 @@ import { Button } from '@/components/button';
 import { PageScreen } from '@/components/page-screen';
 import { SectionCard } from '@/components/section-card';
 import { useAppTheme } from '@/contexts/theme-context';
-import { appConfig } from '@/lib/config';
+import { openWebsite } from '@/lib/website';
 
 export default function HelpScreen() {
   const { colors } = useAppTheme();
-  const website = appConfig?.websiteUrl ?? 'https://jela-ai-official.victorudofiah25.chatgpt.site';
   return (
     <PageScreen title="Help" subtitle="Support and guidance">
       <View style={{ gap: 14 }}>
@@ -23,9 +21,9 @@ export default function HelpScreen() {
         </SectionCard>
         <SectionCard title="Official downloads">
           <AppText tone="muted">Install Android updates only from the official Jela AI website. Review the published version and checksum before installation.</AppText>
-          <Button variant="secondary" icon={<ExternalLink color={colors.text} size={18} />} onPress={() => Linking.openURL(`${website}/download`)}>Open download page</Button>
+          <Button variant="secondary" icon={<ExternalLink color={colors.text} size={18} />} onPress={() => void openWebsite('download')}>Open download page</Button>
         </SectionCard>
-        <Button icon={<Mail color="#FFFFFF" size={18} />} onPress={() => Linking.openURL('mailto:support@zentelinsight.com?subject=Jela%20AI%20support')}>Email support</Button>
+        <Button icon={<Mail color="#FFFFFF" size={18} />} onPress={() => void openWebsite('contact')}>Contact support</Button>
       </View>
     </PageScreen>
   );

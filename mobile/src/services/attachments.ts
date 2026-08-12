@@ -1,5 +1,6 @@
 import * as DocumentPicker from 'expo-document-picker';
 import * as Crypto from 'expo-crypto';
+import * as ImagePicker from 'expo-image-picker';
 
 import { getSupabase } from '@/lib/supabase';
 import { UserMessageError } from '@/lib/errors';
@@ -36,6 +37,20 @@ export async function pickAttachment(): Promise<PickedAttachment | null> {
   return { uri: asset.uri, name: asset.name, mimeType: asset.mimeType, size: asset.size ?? 0 };
 }
 
+export async function pickImage(): Promise<PickedAttachment | null> {
+  const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+  if (!permission.granted) throw new UserMessageError('Allow photo access to choose an image.');
+  const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], quality: 0.9, allowsMultipleSelection: false });
+  if (result.canceled) return null;
+  const asset = result.assets[0];
+  if (!asset?.uri) return null;
+  const mimeType = asset.mimeType ?? 'image/jpeg';
+  const size = asset.fileSize ?? 0;
+  if (!allowedTypes.has(mimeType)) throw new UserMessageError('Choose a JPEG, PNG, or WebP image.');
+  if (size > maxBytes) throw new UserMessageError('Images must be 10 MB or smaller.');
+  return { uri: asset.uri, name: asset.fileName ?? `jela-image-${Date.now()}.jpg`, mimeType, size };
+}
+
 export async function uploadAttachment(asset: PickedAttachment, conversationId?: string | null) {
   const supabase = getSupabase();
   const { data: sessionData } = await supabase.auth.getSession();
@@ -43,7 +58,7 @@ export async function uploadAttachment(asset: PickedAttachment, conversationId?:
   if (!userId) throw new UserMessageError('Sign in again before uploading.');
 
   const extension = asset.name.split('.').pop()?.replace(/[^a-z0-9]/gi, '') || 'bin';
-  const path = `${userId}/${Crypto.randomUUID()}.${extension}`;
+  const path = `${userId}/${conversationId ?? 'pending'}/${Crypto.randomUUID()}.${extension}`;
   const response = await fetch(asset.uri);
   const file = await response.arrayBuffer();
   const upload = await supabase.storage.from('jela-attachments').upload(path, file, {

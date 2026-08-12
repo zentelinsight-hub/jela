@@ -54,7 +54,7 @@ Deno.serve(async (request) => {
     return jsonResponse(500, { code: 'payment_initialization_failed', message: 'Unable to start payment. No charge was made.' });
   }
 
-  const websiteUrl = (Deno.env.get('JELA_WEBSITE_URL') ?? 'https://jela-ai-official.victorudofiah25.chatgpt.site').replace(/\/$/, '');
+  const websiteUrl = (Deno.env.get('JELA_WEBSITE_URL') ?? 'https://www.jelaai.com.ng').replace(/\/$/, '');
   try {
     const payload = await paystackRequest('/transaction/initialize', {
       method: 'POST',
@@ -94,4 +94,3 @@ Deno.serve(async (request) => {
     return jsonResponse(502, { code: 'payment_initialization_failed', message: 'Unable to start payment. No charge was made.' });
   }
 });
-

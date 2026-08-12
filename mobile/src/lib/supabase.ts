@@ -22,7 +22,7 @@ export function getSupabase(): SupabaseClient {
         flowType: 'pkce',
       },
       global: {
-        headers: { 'X-Client-Info': 'jela-ai-android/1.0.0' },
+        headers: { 'X-Client-Info': 'jela-ai-android/1.2.0' },
       },
     });
   }

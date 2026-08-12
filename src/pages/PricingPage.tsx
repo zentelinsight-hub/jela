@@ -35,7 +35,7 @@ export default function PricingPage() {
         <p>{plan.description}</p><ul>{plan.features.map((feature) => <li key={feature}><CheckCircle2 />{feature}</li>)}</ul>
         <p className="pricing-state">{plan.code === 'free' ? 'Included with every verified account.' : plan.purchasable ? 'Available securely inside the Jela AI Android app.' : 'Secure checkout is being prepared. No payment can be taken yet.'}</p>
       </article>)}</div>}
-      <div className="pricing-security"><ShieldCheck /><p><strong>Payment integrity</strong><br />Paystack transactions are initialized and verified by Jela AI's backend. A browser callback alone never activates a plan.</p></div>
+      <div className="pricing-security"><ShieldCheck /><p><strong>Payment integrity</strong><br />Paystack transactions are initialized and verified by Jela AI&apos;s backend. A browser callback alone never activates a plan.</p></div>
     </div></section>
   </main>
 }

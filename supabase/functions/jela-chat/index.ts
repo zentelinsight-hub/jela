@@ -116,6 +116,35 @@ function countTools(response: OpenAIResponse | undefined) {
   };
 }
 
+async function buildProviderInput(
+  serviceClient: ReturnType<typeof createClient>,
+  userId: string,
+  message: string,
+  attachmentIds: string[],
+) {
+  const content: Array<Record<string, unknown>> = [];
+  if (message) content.push({ type: 'input_text', text: message });
+  if (attachmentIds.length > 0) {
+    const attachments = await serviceClient
+      .from('jela_attachments')
+      .select('id,storage_path,file_name,mime_type')
+      .in('id', attachmentIds)
+      .eq('owner_id', userId)
+      .eq('status', 'ready');
+    if (attachments.error || (attachments.data?.length ?? 0) !== attachmentIds.length) throw new Error('invalid_attachment');
+    for (const attachment of attachments.data ?? []) {
+      const signed = await serviceClient.storage.from('jela-attachments').createSignedUrl(attachment.storage_path, 300);
+      if (signed.error) throw new Error('attachment_access_failed');
+      if (attachment.mime_type.startsWith('image/')) {
+        content.push({ type: 'input_image', image_url: signed.data.signedUrl, detail: 'auto' });
+      } else {
+        content.push({ type: 'input_file', file_url: signed.data.signedUrl, filename: attachment.file_name });
+      }
+    }
+  }
+  return [{ role: 'user', content }];
+}
+
 Deno.serve(async (request) => {
   if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: corsHeaders });
   if (request.method !== 'POST') return jsonResponse(405, { code: 'method_not_allowed', message: 'Use POST.' });
@@ -197,10 +226,20 @@ Deno.serve(async (request) => {
   }
 
   const startedAt = Date.now();
+  let providerInput: Array<Record<string, unknown>>;
+  try {
+    providerInput = await buildProviderInput(serviceClient, userData.user.id, message, attachmentIds);
+  } catch {
+    await serviceClient.rpc('fail_jela_chat_request', {
+      p_user_id: userData.user.id, p_request_id: idempotencyKey, p_error_code: 'attachment_access_failed',
+      p_error_message: 'An attachment could not be prepared.', p_partial_content: '', p_duration_ms: Date.now() - startedAt,
+    });
+    return jsonResponse(400, { code: 'attachment_access_failed', message: 'Jela could not read that attachment. Remove it and try again.' });
+  }
   const providerBody: Record<string, unknown> = {
     model: accepted.model,
     instructions: accepted.system_prompt,
-    input: message,
+    input: providerInput,
     max_output_tokens: accepted.max_output_tokens,
     stream: true,
     store: false,

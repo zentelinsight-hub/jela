@@ -40,7 +40,7 @@ Set only the public mobile variables in `.env`:
 ```text
 EXPO_PUBLIC_SUPABASE_URL=https://mjihdpcqohvrbcpqmuvo.supabase.co
 EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY=
-EXPO_PUBLIC_JELA_WEBSITE_URL=https://jela-ai-official.victorudofiah25.chatgpt.site
+EXPO_PUBLIC_JELA_WEBSITE_URL=https://www.jelaai.com.ng
 EXPO_PUBLIC_APP_ENV=development
 EXPO_PUBLIC_ENABLE_GOOGLE_AUTH=false
 EXPO_PUBLIC_ENABLE_GITHUB_AUTH=false

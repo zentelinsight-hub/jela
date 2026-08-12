@@ -31,6 +31,7 @@ export function Seo({ title, description, path, noIndex = false, structuredData 
     setMeta('og:title', fullTitle, true)
     setMeta('og:description', description, true)
     setMeta('og:type', 'website', true)
+    setMeta('og:site_name', 'Jela AI', true)
     setMeta('og:url', pageUrl, true)
     setMeta('og:image', SOCIAL_IMAGE_URL, true)
     setMeta('og:image:alt', 'Jela AI — intelligence that helps you move forward', true)

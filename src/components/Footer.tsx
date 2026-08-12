@@ -14,6 +14,7 @@ const groups = [
     title: 'Resources',
     links: [
       ['Documentation', '/docs'],
+      ['Help', '/help'],
       ['FAQ', '/faq'],
     ],
   },

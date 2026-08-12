@@ -17,7 +17,7 @@ Copy `.env.example` to `.env.local` and provide the public values for the existi
 ```text
 VITE_SUPABASE_URL=
 VITE_SUPABASE_PUBLISHABLE_KEY=
-VITE_SITE_URL=https://jela-snowy.vercel.app
+VITE_SITE_URL=https://www.jelaai.com.ng
 VITE_GOOGLE_SITE_VERIFICATION=
 ```
 
@@ -59,9 +59,9 @@ All required routes are declared in `src/App.tsx`. `vercel.json` rewrites only t
 
 ## Search and canonical deployment
 
-The production canonical origin is `https://jela-snowy.vercel.app` unless `VITE_SITE_URL` explicitly supplies an approved replacement. Canonical tags, Open Graph metadata, Twitter metadata, `robots.txt`, `sitemap.xml`, favicons, and SoftwareApplication structured data are included. Callback pages, missing pages, and Vercel preview deployments are marked `noindex`.
+The production canonical origin is `https://www.jelaai.com.ng`. Canonical tags, Open Graph metadata, Twitter metadata, `robots.txt`, `sitemap.xml`, favicons, and WebSite structured data are included. Callback pages, missing pages, and Vercel preview deployments are marked `noindex`.
 
-For Google Search Console, set `VITE_GOOGLE_SITE_VERIFICATION` to the exact HTML-tag verification token in the production environment, deploy, then submit `https://jela-snowy.vercel.app/sitemap.xml`. Do not set that token in source control.
+For Google Search Console, set `VITE_GOOGLE_SITE_VERIFICATION` to the exact HTML-tag verification token in the production environment, deploy, then submit `https://www.jelaai.com.ng/sitemap.xml`. Do not set that token in source control.
 
 ## Official assets
 

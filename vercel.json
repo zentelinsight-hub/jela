@@ -17,6 +17,9 @@
     { "source": "/faq", "destination": "/index" },
     { "source": "/privacy", "destination": "/index" },
     { "source": "/terms", "destination": "/index" },
+    { "source": "/help", "destination": "/index" },
+    { "source": "/forgot-password", "destination": "/index" },
+    { "source": "/reset-password", "destination": "/index" },
     { "source": "/email-verified", "destination": "/index" },
     { "source": "/payment-return", "destination": "/index" }
   ]

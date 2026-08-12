@@ -12,6 +12,7 @@ dist
 dist-ssr
 mobile/dist-phase3-android/
 mobile/dist-phase4/
+mobile/dist-android/
 *.local
 .env
 .env.*

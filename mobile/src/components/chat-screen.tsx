@@ -1,20 +1,20 @@
 import { FlashList, type FlashListRef } from '@shopify/flash-list';
 import * as Clipboard from 'expo-clipboard';
 import * as Haptics from 'expo-haptics';
+import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
-import { Check, Copy, Paperclip, RefreshCw, Send, Share2, ThumbsDown, ThumbsUp, X } from 'lucide-react-native';
+import { Check, Copy, ImagePlus, Paperclip, RefreshCw, Send, Share2, ThumbsDown, ThumbsUp, X } from 'lucide-react-native';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   AppState,
-  KeyboardAvoidingView,
-  Platform,
   Pressable,
   Share,
   TextInput,
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
 
 import { AppHeader } from '@/components/app-header';
 import { AppText } from '@/components/app-text';
@@ -27,7 +27,7 @@ import { useAppTheme } from '@/contexts/theme-context';
 import { friendlyError } from '@/lib/errors';
 import { getSupabase } from '@/lib/supabase';
 import { chatInputSchema } from '@/lib/validation';
-import { pickAttachment, removeUploadedAttachment, uploadAttachment, type PickedAttachment } from '@/services/attachments';
+import { pickAttachment, pickImage, removeUploadedAttachment, uploadAttachment, type PickedAttachment } from '@/services/attachments';
 import { createRequestId, streamJelaResponse } from '@/services/chat';
 import { fetchConversation } from '@/services/conversations';
 import { radius } from '@/theme/tokens';
@@ -233,7 +233,8 @@ export function ChatScreen({ initialConversationId }: { initialConversationId?: 
 
   const submit = async () => {
     if (!canSend) { setError(usageResetAt ? 'Your Free usage will reset automatically after the time shown on the Usage page.' : 'Usage is not available for this account right now.'); return; }
-    const parsed = chatInputSchema.safeParse(input);
+    const messageToSend = input.trim() || (attachments.length > 0 ? 'Please analyze this image or file.' : '');
+    const parsed = chatInputSchema.safeParse(messageToSend);
     if (!parsed.success) { setError(parsed.error.issues[0]?.message ?? 'Write a message first.'); return; }
     if (attachments.some((item) => item.status !== 'ready')) {
       setError('Wait for each attachment to finish uploading, retry it, or remove it.');
@@ -272,6 +273,18 @@ export function ChatScreen({ initialConversationId }: { initialConversationId?: 
     } finally { setPickingAttachment(false); }
   };
 
+  const attachImage = async () => {
+    setPickingAttachment(true); setError(null);
+    try {
+      const picked = await pickImage();
+      if (!picked) return;
+      const localId = `image-${Date.now()}-${Math.random()}`;
+      setAttachments((current) => [...current, { id: localId, file_name: picked.name, status: 'uploading', picked }]);
+      void uploadDraft(localId, picked);
+    } catch (attachmentError) { setError(friendlyError(attachmentError, 'Could not select this image.')); }
+    finally { setPickingAttachment(false); }
+  };
+
   const retryAttachment = (item: AttachmentDraft) => {
     const localId = `attachment-retry-${createRequestId()}`;
     setAttachments((current) => current.map((entry) => entry.id === item.id ? { ...entry, id: localId, status: 'uploading', error: undefined } : entry));
@@ -299,7 +312,7 @@ export function ChatScreen({ initialConversationId }: { initialConversationId?: 
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={['top', 'bottom']}>
-      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined} keyboardVerticalOffset={0}>
+      <KeyboardAvoidingView style={{ flex: 1 }} behavior="padding" keyboardVerticalOffset={0}>
         <AppHeader title={title} subtitle="Jela AI" onBack={initialConversationId ? () => router.back() : undefined} onMenu={initialConversationId ? undefined : () => setMenuOpen(true)} onNew={reset} />
         {!canChat ? (
           <EmptyState
@@ -333,6 +346,7 @@ export function ChatScreen({ initialConversationId }: { initialConversationId?: 
             {!usageAvailable ? <AppText tone="accent" variant="caption">Usage limit reached. Open Usage to see the next available reset.</AppText> : null}
             {attachments.map((item) => (
               <View key={item.id} style={{ flexDirection: 'row', alignItems: 'center', gap: 8, alignSelf: 'flex-start', backgroundColor: colors.surface, borderRadius: radius.pill, paddingHorizontal: 11, paddingVertical: 6 }}>
+                {item.picked.mimeType.startsWith('image/') ? <Image source={{ uri: item.picked.uri }} style={{ width: 34, height: 34, borderRadius: 8 }} contentFit="cover" /> : null}
                 {item.status === 'uploading' ? <ActivityIndicator color={colors.primary} size="small" /> : null}
                 <View style={{ maxWidth: 250 }}><AppText variant="caption" numberOfLines={1}>{item.file_name}</AppText>{item.status === 'failed' ? <AppText tone="danger" variant="caption">Upload failed</AppText> : null}</View>
                 {item.status === 'failed' ? <Pressable accessibilityLabel={`Retry ${item.file_name}`} onPress={() => retryAttachment(item)}><RefreshCw color={colors.primary} size={16} /></Pressable> : null}
@@ -341,9 +355,9 @@ export function ChatScreen({ initialConversationId }: { initialConversationId?: 
             ))}
             <View style={{ flexDirection: 'row', alignItems: 'flex-end', gap: 8 }}>
               {flags.attachments_enabled && account?.status === 'active' ? (
-                <Pressable accessibilityLabel="Attach a file" accessibilityRole="button" disabled={pickingAttachment || sending} onPress={attach} style={{ padding: 11 }}>
-                  {pickingAttachment ? <ActivityIndicator color={colors.primary} /> : <Paperclip color={colors.text} />}
-                </Pressable>
+                <><Pressable accessibilityLabel="Attach an image" accessibilityRole="button" disabled={pickingAttachment || sending} onPress={attachImage} style={{ padding: 11 }}>
+                  {pickingAttachment ? <ActivityIndicator color={colors.primary} /> : <ImagePlus color={colors.text} />}
+                </Pressable><Pressable accessibilityLabel="Attach a file" accessibilityRole="button" disabled={pickingAttachment || sending} onPress={attach} style={{ padding: 11 }}><Paperclip color={colors.text} /></Pressable></>
               ) : null}
               <TextInput
                 accessibilityLabel="Message Jela AI"
@@ -360,9 +374,9 @@ export function ChatScreen({ initialConversationId }: { initialConversationId?: 
               <Pressable
                 accessibilityLabel={sending ? 'Sending message' : 'Send message'}
                 accessibilityRole="button"
-                disabled={!sending && (!input.trim() || !canSend)}
+                disabled={!sending && ((!input.trim() && attachments.length === 0) || !canSend)}
                 onPress={() => sending ? abortRef.current?.abort() : void submit()}
-                style={{ width: 48, height: 48, alignItems: 'center', justifyContent: 'center', borderRadius: radius.pill, backgroundColor: colors.primary, opacity: sending || !input.trim() || !canSend ? 0.45 : 1 }}
+                style={{ width: 48, height: 48, alignItems: 'center', justifyContent: 'center', borderRadius: radius.pill, backgroundColor: colors.primary, opacity: !sending && ((!input.trim() && attachments.length === 0) || !canSend) ? 0.45 : 1 }}
               >
                 {sending ? <X color="#FFFFFF" size={21} /> : <Send color="#FFFFFF" size={21} />}
               </Pressable>
