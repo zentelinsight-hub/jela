@@ -8,17 +8,15 @@ import { PageScreen } from '@/components/page-screen';
 import { TextField } from '@/components/text-field';
 import { useAuth } from '@/contexts/auth-context';
 import { friendlyError } from '@/lib/errors';
-import { isUsernameAvailable, updateProfile } from '@/services/account';
+import { updateProfile } from '@/services/account';
 import { pickAvatar, removeAvatar, signedAvatarUrl, uploadAvatarVersion } from '@/services/avatar';
 
 export default function ProfileScreen() {
   const { user, account, refreshAccount } = useAuth();
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
-  const [displayName, setDisplayName] = useState('');
-  const [username, setUsername] = useState('');
   const [age, setAge] = useState('');
-  const [usernameState, setUsernameState] = useState<'idle' | 'checking' | 'available' | 'unavailable'>('idle');
+  const [gender, setGender] = useState<'male' | 'female' | 'prefer_not_to_say' | ''>('');
   const [saving, setSaving] = useState(false);
   const [avatarBusy, setAvatarBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
@@ -28,20 +26,9 @@ export default function ProfileScreen() {
   useEffect(() => {
     setFirstName(account?.first_name ?? '');
     setLastName(account?.last_name ?? '');
-    setDisplayName(account?.display_name ?? '');
-    setUsername(account?.username ?? '');
     setAge(account?.age ? String(account.age) : '');
+    setGender(account?.gender ?? '');
   }, [account]);
-
-  useEffect(() => {
-    const normalized = username.trim().toLowerCase();
-    if (!/^[a-z0-9_]{3,30}$/.test(normalized) || normalized === account?.username) { setUsernameState('idle'); return; }
-    setUsernameState('checking');
-    const timer = setTimeout(() => void isUsernameAvailable(normalized)
-      .then((available) => setUsernameState(available ? 'available' : 'unavailable'))
-      .catch(() => setUsernameState('idle')), 450);
-    return () => clearTimeout(timer);
-  }, [account?.username, username]);
 
   useEffect(() => { void signedAvatarUrl(account?.avatar_path ?? null).then(setAvatarUrl).catch(() => setAvatarUrl(null)); }, [account?.avatar_path]);
 
@@ -74,12 +61,11 @@ export default function ProfileScreen() {
   const save = async () => {
     const parsedAge = Number(age);
     if (firstName.trim().length < 2 || lastName.trim().length < 2) { setError('Enter your first and last name.'); return; }
-    if (!/^[a-z0-9_]{3,30}$/.test(username.trim().toLowerCase())) { setError('Enter a valid username.'); return; }
-    if (usernameState === 'unavailable') { setError('That username is already taken.'); return; }
     if (!Number.isInteger(parsedAge) || parsedAge < 13 || parsedAge > 120) { setError('Enter an age between 13 and 120.'); return; }
+    if (!gender) { setError('Select your gender.'); return; }
     setSaving(true); setError(null); setMessage(null);
     try {
-      await updateProfile({ firstName, lastName, displayName, username, age: parsedAge });
+      await updateProfile({ firstName, lastName, age: parsedAge, gender });
       await refreshAccount();
       setMessage('Profile saved.');
     } catch (saveError) { setError(friendlyError(saveError, 'Could not save your profile.')); }
@@ -96,9 +82,13 @@ export default function ProfileScreen() {
         </View>
         <TextField label="First name" value={firstName} onChangeText={setFirstName} autoCapitalize="words" />
         <TextField label="Last name" value={lastName} onChangeText={setLastName} autoCapitalize="words" />
-        <TextField label="Display name" value={displayName} onChangeText={setDisplayName} autoCapitalize="words" hint="Optional name shown inside Jela AI." />
-        <TextField label="Username" value={username} onChangeText={(value) => setUsername(value.toLowerCase().replace(/[^a-z0-9_]/g, ''))} autoCorrect={false} error={usernameState === 'unavailable' ? 'That username is already taken.' : null} hint={usernameState === 'checking' ? 'Checking availability…' : usernameState === 'available' ? 'Username is available.' : '3–30 lowercase letters, numbers, or underscores.'} />
         <TextField label="Age" value={age} onChangeText={setAge} keyboardType="number-pad" maxLength={3} />
+        <AppText variant="label">Gender</AppText>
+        <View style={{ gap: 8 }}>
+          <Button fullWidth variant={gender === 'male' ? 'primary' : 'secondary'} onPress={() => setGender('male')}>Male</Button>
+          <Button fullWidth variant={gender === 'female' ? 'primary' : 'secondary'} onPress={() => setGender('female')}>Female</Button>
+          <Button fullWidth variant={gender === 'prefer_not_to_say' ? 'primary' : 'secondary'} onPress={() => setGender('prefer_not_to_say')}>Prefer not to say</Button>
+        </View>
         <TextField label="Email" value={user?.email ?? ''} editable={false} hint="Email changes require a verified account flow and are not available here." />
         {error ? <AppText tone="danger" variant="caption">{error}</AppText> : null}
         {message ? <AppText tone="success" variant="caption">{message}</AppText> : null}

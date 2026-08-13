@@ -10,6 +10,7 @@ export type JelaAccount = {
   display_name: string | null;
   username: string | null;
   age: number | null;
+  gender: 'male' | 'female' | 'prefer_not_to_say' | null;
   profile_completed_at: string | null;
   google_identity: boolean;
   password_set_at: string | null;

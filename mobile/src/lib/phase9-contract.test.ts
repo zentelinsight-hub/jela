@@ -14,6 +14,9 @@ const deletion = readFileSync(resolve(root, 'supabase/functions/jela-account-del
 const oauth = readFileSync(resolve(root, 'mobile/src/services/oauth.ts'), 'utf8');
 const googleLogin = readFileSync(resolve(root, 'mobile/src/app/(auth)/login.tsx'), 'utf8');
 const googleSignup = readFileSync(resolve(root, 'mobile/src/app/(auth)/signup.tsx'), 'utf8');
+const profileCompletion = readFileSync(resolve(root, 'mobile/src/app/(auth)/profile-completion.tsx'), 'utf8');
+const accountService = readFileSync(resolve(root, 'mobile/src/services/account.ts'), 'utf8');
+const genderProfile = readFileSync(resolve(root, 'supabase/migrations/20260813170000_replace_username_with_gender.sql'), 'utf8');
 
 describe('Phase 9 production security contracts', () => {
   it('scopes both vector retrieval functions to the authenticated owner and ready embeddings', () => {
@@ -73,5 +76,15 @@ describe('Phase 9 production security contracts', () => {
     expect(googleSignup).toContain("router.replace('/' as Href)");
     expect(googleLogin).not.toContain('login-verification');
     expect(googleSignup).not.toContain('login-verification');
+  });
+
+  it('persists required gender through the authenticated shared profile transaction', () => {
+    expect(genderProfile).toContain('add column if not exists gender text');
+    expect(genderProfile).toContain('update_jela_profile_v3');
+    expect(genderProfile).toContain('and gender is not null');
+    expect(accountService).toContain("rpc('update_jela_profile_v3'");
+    expect(accountService).toContain('p_gender: input.gender');
+    expect(profileCompletion).toContain('Select your gender.');
+    expect(profileCompletion).not.toContain('label="Username"');
   });
 });

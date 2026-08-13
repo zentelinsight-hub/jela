@@ -11,7 +11,7 @@ Deno.serve(async (request) => {
 
   const [account, roles, adminAccess] = await Promise.all([
     auth.serviceClient.from('jela_accounts')
-      .select('id,first_name,last_name,display_name,username,age,avatar_url,avatar_path,status,profile_completed_at,google_identity,password_set_at,created_at,updated_at')
+      .select('id,first_name,last_name,display_name,gender,age,avatar_url,avatar_path,status,profile_completed_at,google_identity,password_set_at,created_at,updated_at')
       .eq('id', auth.user.id).maybeSingle(),
     auth.serviceClient.from('jela_account_roles').select('role').eq('user_id', auth.user.id),
     auth.serviceClient.from('jela_admin_session_grants').select('expires_at')
@@ -30,8 +30,8 @@ Deno.serve(async (request) => {
       account.data?.profile_completed_at
       && account.data?.first_name?.trim().length >= 2
       && account.data?.last_name?.trim().length >= 2
-      && account.data?.username
       && account.data?.age
+      && account.data?.gender
       && (!account.data?.google_identity || account.data?.password_set_at),
     ),
     adminAccessGranted: roleNames.includes('admin') && Boolean(adminAccess.data) && !adminAccess.error,

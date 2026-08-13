@@ -88,7 +88,14 @@ export function AuthProvider({ children }: PropsWithChildren) {
     } catch (securityError) {
       const cached = await fetchCachedAccount(user.id);
       if (cached?.profile) {
-        setProfileComplete(Boolean(cached.profile.profile_completed_at));
+        setProfileComplete(Boolean(
+          cached.profile.profile_completed_at
+          && cached.profile.first_name.trim().length >= 2
+          && cached.profile.last_name.trim().length >= 2
+          && cached.profile.age
+          && cached.profile.gender
+          && (!cached.profile.google_identity || cached.profile.password_set_at),
+        ));
         setAdminAccessGranted(false);
         setSnapshot({ profile: cached.profile, roles: [] });
         setError('You’re offline. Cached workspace browsing is available; reconnect before using Jela or Admin.');

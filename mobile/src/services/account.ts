@@ -34,27 +34,17 @@ export function fetchCachedAccount(userId: string) {
 export async function updateProfile(input: {
   firstName: string;
   lastName: string;
-  displayName?: string;
-  username: string;
   age: number;
+  gender: 'male' | 'female' | 'prefer_not_to_say';
 }) {
-  const { data, error } = await getSupabase().rpc('update_jela_profile_v2', {
+  const { data, error } = await getSupabase().rpc('update_jela_profile_v3', {
     p_first_name: input.firstName.trim(),
     p_last_name: input.lastName.trim(),
-    p_display_name: input.displayName?.trim() || null,
-    p_username: input.username.trim().toLowerCase(),
     p_age: input.age,
+    p_gender: input.gender,
   });
   if (error) throw error;
   return data as JelaAccount;
-}
-
-export async function isUsernameAvailable(username: string) {
-  const { data, error } = await getSupabase().rpc('is_jela_username_available', {
-    p_username: username.trim().toLowerCase(),
-  });
-  if (error) throw error;
-  return data === true;
 }
 
 export function accountStatusMessage(status?: AccountStatus | null) {

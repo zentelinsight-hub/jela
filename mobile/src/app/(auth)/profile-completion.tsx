@@ -13,7 +13,7 @@ import { TextField } from '@/components/text-field';
 import { useAuth } from '@/contexts/auth-context';
 import { useAppTheme } from '@/contexts/theme-context';
 import { friendlyError } from '@/lib/errors';
-import { isUsernameAvailable, updateProfile } from '@/services/account';
+import { updateProfile } from '@/services/account';
 import { signedAvatarUrl } from '@/services/avatar';
 import { setGoogleAccountPassword } from '@/services/security';
 
@@ -23,10 +23,9 @@ export default function ProfileCompletionScreen() {
   const { session, user, profileComplete, account, refreshAccount, refreshSecurity } = useAuth();
   const hydrated = useRef(false);
   const [form, setForm] = useState({
-    firstName: account?.first_name ?? '', lastName: account?.last_name ?? '', displayName: account?.display_name ?? '',
-    username: account?.username ?? '', age: account?.age ? String(account.age) : '', password: '', confirmPassword: '',
+    firstName: account?.first_name ?? '', lastName: account?.last_name ?? '',
+    age: account?.age ? String(account.age) : '', gender: account?.gender ?? '', password: '', confirmPassword: '',
   });
-  const [availability, setAvailability] = useState<'idle' | 'checking' | 'available' | 'unavailable'>('idle');
   const [saving, setSaving] = useState(false);
   const [avatarLoading, setAvatarLoading] = useState(true);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
@@ -42,9 +41,8 @@ export default function ProfileCompletionScreen() {
     setForm({
       firstName,
       lastName,
-      displayName: account.display_name || fullName,
-      username: account.username ?? '',
       age: account.age ? String(account.age) : '',
+      gender: account.gender ?? '',
       password: '',
       confirmPassword: '',
     });
@@ -62,26 +60,14 @@ export default function ProfileCompletionScreen() {
       .finally(() => setAvatarLoading(false));
   }, [account?.avatar_path, account?.avatar_url, user?.user_metadata?.avatar_url, user?.user_metadata?.picture]);
 
-  useEffect(() => {
-    const username = form.username.trim().toLowerCase();
-    if (!/^[a-z0-9_]{3,30}$/.test(username)) { setAvailability('idle'); return; }
-    setAvailability('checking');
-    const timer = setTimeout(() => void isUsernameAvailable(username)
-      .then((available) => setAvailability(available ? 'available' : 'unavailable'))
-      .catch(() => setAvailability('idle')), 450);
-    return () => clearTimeout(timer);
-  }, [form.username]);
-
   if (!session) return <Redirect href="/(auth)/login" />;
   if (profileComplete) return <Redirect href="/" />;
 
   const save = async () => {
     const age = Number(form.age);
-    const username = form.username.trim().toLowerCase();
     if (form.firstName.trim().length < 2 || form.lastName.trim().length < 2) { setError('Enter your first and last name.'); return; }
-    if (!/^[a-z0-9_]{3,30}$/.test(username)) { setError('Use 3–30 lowercase letters, numbers, or underscores for your username.'); return; }
-    if (availability === 'unavailable') { setError('That username is already taken.'); return; }
     if (!Number.isInteger(age) || age < 13 || age > 120) { setError('Enter an age between 13 and 120.'); return; }
+    if (!['male', 'female', 'prefer_not_to_say'].includes(form.gender)) { setError('Select your gender.'); return; }
     const needsPassword = Boolean(account?.google_identity && !account?.password_set_at);
     if (needsPassword && !/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,72}$/.test(form.password)) {
       setError('Use 8–72 password characters with an uppercase letter, lowercase letter, and number.'); return;
@@ -90,7 +76,7 @@ export default function ProfileCompletionScreen() {
     setSaving(true); setError(null);
     try {
       if (needsPassword) await setGoogleAccountPassword(form.password);
-      await updateProfile({ ...form, username, age });
+      await updateProfile({ firstName: form.firstName, lastName: form.lastName, age, gender: form.gender as 'male' | 'female' | 'prefer_not_to_say' });
       await Promise.all([refreshAccount(), refreshSecurity()]);
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       router.replace('/');
@@ -119,21 +105,20 @@ export default function ProfileCompletionScreen() {
           </View>
           <TextField label="First name" value={form.firstName} onChangeText={update('firstName')} autoCapitalize="words" />
           <TextField label="Last name" value={form.lastName} onChangeText={update('lastName')} autoCapitalize="words" />
-          <TextField label="Display name" value={form.displayName} onChangeText={update('displayName')} autoCapitalize="words" hint="Optional name shown inside Jela AI." />
-          <TextField
-            label="Username" value={form.username} onChangeText={(value) => update('username')(value.toLowerCase().replace(/[^a-z0-9_]/g, ''))}
-            autoCapitalize="none" autoCorrect={false}
-            error={availability === 'unavailable' ? 'That username is already taken.' : null}
-            hint={availability === 'checking' ? 'Checking availability…' : availability === 'available' ? 'Username is available.' : '3–30 lowercase letters, numbers, or underscores.'}
-          />
           <TextField label="Age" value={form.age} onChangeText={update('age')} keyboardType="number-pad" maxLength={3} />
+          <AppText variant="label">Gender</AppText>
+          <View style={{ gap: 8 }}>
+            <Button fullWidth variant={form.gender === 'male' ? 'primary' : 'secondary'} onPress={() => update('gender')('male')}>Male</Button>
+            <Button fullWidth variant={form.gender === 'female' ? 'primary' : 'secondary'} onPress={() => update('gender')('female')}>Female</Button>
+            <Button fullWidth variant={form.gender === 'prefer_not_to_say' ? 'primary' : 'secondary'} onPress={() => update('gender')('prefer_not_to_say')}>Prefer not to say</Button>
+          </View>
           {account?.google_identity && !account?.password_set_at ? (
             <>
               <TextField label="Create password" value={form.password} onChangeText={update('password')} secureTextEntry autoCapitalize="none" autoCorrect={false} hint="8–72 characters with uppercase, lowercase, and a number." />
               <TextField label="Confirm password" value={form.confirmPassword} onChangeText={update('confirmPassword')} secureTextEntry autoCapitalize="none" autoCorrect={false} />
             </>
           ) : null}
-          <AppText tone="muted" variant="caption">First name, last name, username, age, and Google-account password setup are required before Chat can open.</AppText>
+          <AppText tone="muted" variant="caption">Name, age, gender, and Google-account password setup are required before Chat can open.</AppText>
           {error ? <AppText tone="danger" variant="caption">{error}</AppText> : null}
           <Button fullWidth loading={saving} onPress={() => void save()}>Save and continue</Button>
         </View>
