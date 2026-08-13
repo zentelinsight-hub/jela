@@ -1,4 +1,4 @@
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter, type Href } from 'expo-router';
 import * as Linking from 'expo-linking';
 import { useEffect, useState } from 'react';
 
@@ -16,11 +16,11 @@ export default function CallbackScreen() {
     const finish = async () => {
       try {
         if (params.code) {
-          await completeGoogleCallback(Linking.createURL('auth/callback', { queryParams: { code: params.code } }));
+          await completeGoogleCallback(Linking.createURL('callback', { queryParams: { code: params.code } }));
         }
         const { data } = await getSupabase().auth.getSession();
         if (!data.session) throw new Error('missing_session');
-        router.replace('/');
+        router.replace('/(auth)/login-verification' as Href);
       } catch { setError('Unable to complete Google sign-in. Please try again.'); }
     };
     void finish();

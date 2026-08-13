@@ -24,7 +24,7 @@ export default function DocsHomePage() {
         <div className="docs-hero">
           <p className="eyebrow">Jela AI documentation</p>
           <h1>Clear guidance from the start.</h1>
-          <p>Learn what Jela AI is, how the Android experience is intended to work and where to find reliable product information.</p>
+          <p>Learn how Jela AI chat, Memory, Projects, Files, usage, security and privacy work in the Android personal workspace.</p>
           <label className="docs-search">
             <Search size={19} aria-hidden="true" />
             <span className="sr-only">Search documentation topics</span>

@@ -32,7 +32,7 @@ type ThemeContextValue = {
 const ThemeContext = createContext<ThemeContextValue | null>(null);
 
 export function ThemeProvider({ children }: PropsWithChildren) {
-  const { session } = useAuth();
+  const { session, verified } = useAuth();
   const systemScheme = useColorScheme();
   const [preference, setPreferenceState] = useState<ThemePreference>('system');
 
@@ -42,7 +42,7 @@ export function ThemeProvider({ children }: PropsWithChildren) {
   }, []);
 
   const reconcile = useCallback(async () => {
-    if (!session) return;
+    if (!session || !verified) return;
     const { data, error } = await getSupabase()
       .from('jela_user_settings')
       .select('appearance')
@@ -52,7 +52,7 @@ export function ThemeProvider({ children }: PropsWithChildren) {
       applyPreference(data.appearance);
       await AsyncStorage.setItem(preferenceKey, data.appearance);
     }
-  }, [applyPreference, session]);
+  }, [applyPreference, session, verified]);
 
   useEffect(() => {
     AsyncStorage.getItem(preferenceKey).then((stored) => {
@@ -65,7 +65,7 @@ export function ThemeProvider({ children }: PropsWithChildren) {
   useEffect(() => { void reconcile(); }, [reconcile]);
 
   useEffect(() => {
-    if (!session) return;
+    if (!session || !verified) return;
     const supabase = getSupabase();
     const channel = supabase.channel(`appearance-${session.user.id}`)
       .on('postgres_changes', {
@@ -76,7 +76,7 @@ export function ThemeProvider({ children }: PropsWithChildren) {
       if (state === 'active') void reconcile();
     });
     return () => { appState.remove(); void supabase.removeChannel(channel); };
-  }, [reconcile, session]);
+  }, [reconcile, session, verified]);
 
   const resolved: 'light' | 'dark' =
     preference === 'system' ? (systemScheme === 'light' ? 'light' : 'dark') : preference;
@@ -90,7 +90,7 @@ export function ThemeProvider({ children }: PropsWithChildren) {
         const previous = preference;
         applyPreference(nextPreference);
         await AsyncStorage.setItem(preferenceKey, nextPreference);
-        if (!session) return;
+        if (!session || !verified) return;
         const { error } = await getSupabase().from('jela_user_settings').upsert({
           user_id: session.user.id,
           appearance: nextPreference,
@@ -103,7 +103,7 @@ export function ThemeProvider({ children }: PropsWithChildren) {
         }
       },
     }),
-    [applyPreference, preference, resolved, session],
+    [applyPreference, preference, resolved, session, verified],
   );
 
   return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;

@@ -57,7 +57,7 @@ export async function streamJelaResponse(
   const token = data.session?.access_token;
   if (!token) throw new UserMessageError('Your session expired. Sign in again.');
 
-  const response = await fetch(`${appConfig.supabaseUrl}/functions/v1/jela-chat`, {
+  const response = await fetch(`${appConfig.supabaseUrl}/functions/v1/jela-execute`, {
     method: 'POST',
     headers: {
       Authorization: `Bearer ${token}`,

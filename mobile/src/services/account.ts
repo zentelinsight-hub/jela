@@ -2,6 +2,7 @@ import type { User } from '@supabase/supabase-js';
 
 import { getSupabase } from '@/lib/supabase';
 import type { AccountStatus, AppRole, JelaAccount } from '@/types/database';
+import { readCache, cachedRequest } from '@/lib/offline-cache';
 
 export type AccountSnapshot = {
   profile: JelaAccount | null;
@@ -9,6 +10,7 @@ export type AccountSnapshot = {
 };
 
 export async function fetchAccount(user: User): Promise<AccountSnapshot> {
+  return cachedRequest(`account.${user.id}`, async () => {
   const supabase = getSupabase();
   const [profileResult, rolesResult] = await Promise.all([
     supabase.from('jela_accounts').select('*').eq('id', user.id).maybeSingle(),
@@ -22,20 +24,37 @@ export async function fetchAccount(user: User): Promise<AccountSnapshot> {
     profile: profileResult.data as JelaAccount | null,
     roles: (rolesResult.data ?? []).map((entry) => entry.role as AppRole),
   };
+  });
+}
+
+export function fetchCachedAccount(userId: string) {
+  return readCache<AccountSnapshot>(`account.${userId}`);
 }
 
 export async function updateProfile(input: {
   firstName: string;
   lastName: string;
   displayName?: string;
+  username: string;
+  age: number;
 }) {
-  const { data, error } = await getSupabase().rpc('update_jela_profile', {
+  const { data, error } = await getSupabase().rpc('update_jela_profile_v2', {
     p_first_name: input.firstName.trim(),
     p_last_name: input.lastName.trim(),
     p_display_name: input.displayName?.trim() || null,
+    p_username: input.username.trim().toLowerCase(),
+    p_age: input.age,
   });
   if (error) throw error;
   return data as JelaAccount;
+}
+
+export async function isUsernameAvailable(username: string) {
+  const { data, error } = await getSupabase().rpc('is_jela_username_available', {
+    p_username: username.trim().toLowerCase(),
+  });
+  if (error) throw error;
+  return data === true;
 }
 
 export function accountStatusMessage(status?: AccountStatus | null) {

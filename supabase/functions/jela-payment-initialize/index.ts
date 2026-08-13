@@ -1,11 +1,11 @@
-import { authenticatedUser, corsHeaders, jsonResponse, paystackRequest } from '../_shared/http.ts';
+import { corsHeaders, jsonResponse, paystackRequest, verifiedUser } from '../_shared/http.ts';
 
 const codePattern = /^[a-z][a-z0-9_-]{1,30}$/;
 
 Deno.serve(async (request) => {
   if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: corsHeaders });
   if (request.method !== 'POST') return jsonResponse(405, { code: 'method_not_allowed', message: 'Use POST.' });
-  const auth = await authenticatedUser(request);
+  const auth = await verifiedUser(request);
   if (auth instanceof Response) return auth;
 
   let body: { plan_code?: unknown };

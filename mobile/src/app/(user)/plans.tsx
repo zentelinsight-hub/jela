@@ -64,7 +64,7 @@ export default function PlansScreen() {
               {plan.description ? <AppText tone="muted">{plan.description}</AppText> : null}
               {plan.features.map((feature) => <View key={feature} style={{ flexDirection: 'row', gap: 8 }}><Check color={colors.primary} size={18} /><AppText style={{ flex: 1 }}>{feature}</AppText></View>)}
               {plan.code === 'free' ? <AppText tone="muted" variant="caption">Included when you create an account.</AppText> : plan.purchasable ? (
-                <Button loading={processingPlan === plan.code} onPress={() => void pay(plan)}>Continue to secure Paystack checkout</Button>
+                <Button loading={processingPlan === plan.code} onPress={() => void pay(plan)}>Pay</Button>
               ) : <AppText tone="muted" variant="caption">Secure checkout for this plan is being prepared. No payment can be taken yet.</AppText>}
             </SectionCard>
           ))}

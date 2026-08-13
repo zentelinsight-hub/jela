@@ -1,31 +1,12 @@
-import { Search } from 'lucide-react-native';
-import { useState } from 'react';
-import { TextInput, View } from 'react-native';
-
-import { ConversationList } from '@/components/conversation-list';
-import { PageScreen } from '@/components/page-screen';
-import { useAppTheme } from '@/contexts/theme-context';
-import { radius } from '@/theme/tokens';
-
-export default function SearchScreen() {
-  const { colors } = useAppTheme();
-  const [query, setQuery] = useState('');
-  return (
-    <PageScreen title="Search" subtitle="Find a conversation" scroll={false}>
-      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, borderWidth: 1, borderColor: colors.border, borderRadius: radius.md, backgroundColor: colors.surface, paddingHorizontal: 13, marginBottom: 14 }}>
-        <Search color={colors.textMuted} size={19} />
-        <TextInput
-          accessibilityLabel="Search conversations"
-          autoFocus
-          placeholder="Search titles"
-          placeholderTextColor={colors.textMuted}
-          selectionColor={colors.primary}
-          value={query}
-          onChangeText={setQuery}
-          style={{ flex: 1, minHeight: 48, color: colors.text, fontSize: 16 }}
-        />
-      </View>
-      <ConversationList query={query} />
-    </PageScreen>
-  );
-}
+import { useRouter, type Href } from 'expo-router'; import { Brain, FileText, FolderKanban, Image as ImageIcon, MessageSquare, Search } from 'lucide-react-native'; import { useEffect, useState } from 'react'; import { Pressable, TextInput, View } from 'react-native';
+import { AppText } from '@/components/app-text'; import { EmptyState, LoadingState } from '@/components/feedback-state'; import { PageScreen } from '@/components/page-screen'; import { SectionCard } from '@/components/section-card'; import { useAppTheme } from '@/contexts/theme-context'; import { friendlyError } from '@/lib/errors'; import { workspaceService } from '@/services/workspace'; import { radius } from '@/theme/tokens'; import type { WorkspaceSearchResults } from '@/types/workspace';
+const empty:WorkspaceSearchResults={chats:[],projects:[],files:[],memories:[],images:[]};
+export default function SearchScreen(){const router=useRouter();const {colors}=useAppTheme();const [query,setQuery]=useState('');const [results,setResults]=useState(empty);const [loading,setLoading]=useState(false);const [error,setError]=useState<string|null>(null);useEffect(()=>{if(query.trim().length<2){setResults(empty);setLoading(false);return;}setLoading(true);const timer=setTimeout(()=>{void workspaceService.search(query).then(data=>{setResults(data.results);setError(null);}).catch(caught=>setError(friendlyError(caught,'Search could not be completed.'))).finally(()=>setLoading(false));},280);return()=>clearTimeout(timer);},[query]);const total=Object.values(results).reduce((sum,list)=>sum+list.length,0);
+ const heading=(label:string,Icon:typeof Search)=><View style={{flexDirection:'row',alignItems:'center',gap:8}}><Icon color={colors.primary} size={19}/><AppText variant="title">{label}</AppText></View>;
+ return <PageScreen title="Search Jela" subtitle="Your authorized workspace results"><View style={{flexDirection:'row',alignItems:'center',gap:10,borderWidth:1,borderColor:colors.border,borderRadius:radius.md,backgroundColor:colors.surface,paddingHorizontal:13}}><Search color={colors.textMuted} size={19}/><TextInput accessibilityLabel="Search Jela workspace" autoFocus placeholder="Search chats, projects, files, memory and images" placeholderTextColor={colors.textMuted} selectionColor={colors.primary} value={query} onChangeText={setQuery} style={{flex:1,minHeight:50,color:colors.text,fontSize:16}}/></View>{loading?<LoadingState label="Searching your workspace…"/>:error?<AppText tone="danger" variant="caption">{error}</AppText>:query.trim().length<2?<EmptyState title="Search your Jela workspace" message="Results are grouped by type and always filtered to your account."/>:total===0?<EmptyState title="No results" message="Try another word or phrase."/>:<View style={{gap:18}}>
+ {results.chats.length?<View style={{gap:9}}>{heading('Chats',MessageSquare)}{results.chats.map(item=><Pressable key={item.id} onPress={()=>router.push({pathname:'/(user)/conversation/[id]',params:{id:item.id}})}><SectionCard><AppText variant="label">{item.title}</AppText></SectionCard></Pressable>)}</View>:null}
+ {results.projects.length?<View style={{gap:9}}>{heading('Projects',FolderKanban)}{results.projects.map(item=><Pressable key={item.id} onPress={()=>router.push({pathname:'/(user)/project/[id]',params:{id:item.id}} as Href)}><SectionCard><AppText variant="label">{item.name}</AppText><AppText tone="muted" variant="caption">{item.description}</AppText></SectionCard></Pressable>)}</View>:null}
+ {results.files.length?<View style={{gap:9}}>{heading('Files',FileText)}{results.files.map(item=><SectionCard key={item.id}><AppText variant="label">{item.original_name}</AppText><AppText tone="muted" variant="caption">{item.status.replaceAll('_',' ')}</AppText></SectionCard>)}</View>:null}
+ {results.memories.length?<View style={{gap:9}}>{heading('Memory',Brain)}{results.memories.map(item=><SectionCard key={item.id}><AppText numberOfLines={3}>{item.content}</AppText><AppText tone="muted" variant="caption">{item.category.replaceAll('_',' ')} · {item.scope}</AppText></SectionCard>)}</View>:null}
+ {results.images.length?<View style={{gap:9}}>{heading('Images',ImageIcon)}{results.images.map(item=><Pressable key={item.id} onPress={()=>router.push({pathname:'/(user)/conversation/[id]',params:{id:item.conversation_id}})}><SectionCard><AppText numberOfLines={2}>{item.prompt}</AppText></SectionCard></Pressable>)}</View>:null}
+ </View>}</PageScreen>}

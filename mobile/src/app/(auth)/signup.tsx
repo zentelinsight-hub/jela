@@ -43,12 +43,12 @@ export default function SignUpScreen() {
     });
     setLoading(false);
     if (signUpError) setError(authErrorMessage(signUpError, 'Account creation failed. Check your details and try again.'));
-    else if (data.session) router.replace('/(user)');
+    else if (data.session) router.replace('/(auth)/login-verification' as Href);
     else router.replace({ pathname: '/(auth)/verify', params: { email: parsed.data.email } });
   };
   const googleSignUp = async () => {
     setGoogleLoading(true); setError(null);
-    try { await continueWithGoogle(); router.replace('/'); }
+    try { await continueWithGoogle(); router.replace('/(auth)/login-verification' as Href); }
     catch (caught) { setError(authErrorMessage(caught instanceof Error ? caught : null, 'Unable to continue with Google. Please try again.')); }
     finally { setGoogleLoading(false); }
   };

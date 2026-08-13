@@ -1,4 +1,3 @@
-import * as Linking from 'expo-linking';
 import { Download } from 'lucide-react-native';
 import type { PropsWithChildren } from 'react';
 import { useEffect, useState } from 'react';
@@ -13,17 +12,22 @@ import { fetchLatestAndroidRelease } from '@/services/releases';
 import { radius } from '@/theme/tokens';
 import type { AppRelease } from '@/types/database';
 import { getSupabase } from '@/lib/supabase';
+import { openWebsite } from '@/lib/website';
 
 export function UpdateGate({ children }: PropsWithChildren) {
   const { session } = useAuth();
   const { colors } = useAppTheme();
-  const [required, setRequired] = useState<AppRelease | null>(null);
+  const [release, setRelease] = useState<AppRelease | null>(null);
+  const [required, setRequired] = useState(false);
+  const [dismissedVersion, setDismissedVersion] = useState<string | null>(null);
 
   useEffect(() => {
     if (!session) return;
     const refresh = () => fetchLatestAndroidRelease()
       .then((result) => {
-        setRequired(result.state === 'required' && result.release ? result.release : null);
+        const available = result.state !== 'current' && result.release ? result.release : null;
+        setRelease(available && (result.state === 'required' || available.version_name !== dismissedVersion) ? available : null);
+        setRequired(result.state === 'required');
       })
       .catch(() => {
         // A failed update check must not lock users out. Manual retry remains in Settings.
@@ -35,18 +39,19 @@ export function UpdateGate({ children }: PropsWithChildren) {
       .subscribe();
     const appState = AppState.addEventListener('change', (state) => { if (state === 'active') void refresh(); });
     return () => { appState.remove(); void supabase.removeChannel(channel); };
-  }, [session]);
+  }, [dismissedVersion, session]);
 
   return (
     <>
       {children}
-      <Modal visible={Boolean(required)} animationType="fade" onRequestClose={() => undefined} transparent>
+      <Modal visible={Boolean(release)} animationType="fade" onRequestClose={() => { if (!required && release) { setDismissedVersion(release.version_name); setRelease(null); } }} transparent>
         <SafeAreaView style={{ flex: 1, justifyContent: 'center', padding: 22, backgroundColor: colors.overlay }}>
           <View style={{ borderRadius: radius.lg, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surface, padding: 22, alignItems: 'center', gap: 14 }}>
             <Download color={colors.accent} size={46} />
-            <AppText variant="headline" style={{ textAlign: 'center' }}>Update required</AppText>
-            <AppText tone="muted" style={{ textAlign: 'center' }}>Jela AI {required?.version_name} is required for security and compatibility. Install it only from the official signed download.</AppText>
-            {required ? <Button fullWidth onPress={() => Linking.openURL(required.download_url)}>Open official download</Button> : null}
+            <AppText variant="headline" style={{ textAlign: 'center' }}>{required ? 'Update required' : 'A new Jela AI update is ready'}</AppText>
+            <AppText tone="muted" style={{ textAlign: 'center' }}>Jela AI {release?.version_name} includes the latest features and improvements. Download it from the official Jela AI website.</AppText>
+            {release ? <Button fullWidth onPress={() => void openWebsite('download')}>Update Jela AI</Button> : null}
+            {!required && release ? <Button fullWidth variant="ghost" onPress={() => { setDismissedVersion(release.version_name); setRelease(null); }}>Later</Button> : null}
           </View>
         </SafeAreaView>
       </Modal>

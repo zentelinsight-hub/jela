@@ -77,19 +77,45 @@ Deno.serve(async (request) => {
       });
       if (settled.error) throw settled.error;
     } else {
-      const subscription = data.subscription as { subscription_code?: string } | undefined;
+      const subscription = data.subscription as { subscription_code?: string; email_token?: string } | undefined;
       const subscriptionCode = typeof data.subscription_code === 'string'
         ? data.subscription_code
         : subscription?.subscription_code;
       if (subscriptionCode) {
         if (eventType === 'subscription.not_renew') {
-          await serviceClient.from('jela_subscriptions').update({ cancel_at_period_end: true, updated_at: new Date().toISOString() })
+          await serviceClient.from('jela_subscriptions').update({
+            cancel_at_period_end: true,
+            cancellation_requested_at: new Date().toISOString(),
+            provider_status_reason: 'provider_not_renewing',
+            updated_at: new Date().toISOString(),
+          })
             .eq('provider_subscription_id', subscriptionCode);
         } else if (eventType === 'subscription.disable') {
-          await serviceClient.from('jela_subscriptions').update({ status: 'cancelled', updated_at: new Date().toISOString() })
+          await serviceClient.from('jela_subscriptions').update({
+            status: 'cancelled', cancel_at_period_end: true,
+            cancelled_at: new Date().toISOString(),
+            provider_status_reason: 'provider_disabled',
+            updated_at: new Date().toISOString(),
+          })
             .eq('provider_subscription_id', subscriptionCode);
         } else if (eventType === 'invoice.payment_failed') {
-          await serviceClient.from('jela_subscriptions').update({ status: 'past_due', updated_at: new Date().toISOString() })
+          const stored = await serviceClient.from('jela_subscriptions')
+            .select('provider_email_token').eq('provider_subscription_id', subscriptionCode).maybeSingle();
+          const emailToken = subscription?.email_token ?? stored.data?.provider_email_token;
+          if (emailToken) {
+            try {
+              await paystackRequest('/subscription/disable', {
+                method: 'POST', body: JSON.stringify({ code: subscriptionCode, token: emailToken }),
+              });
+            } catch { /* The local downgrade remains authoritative and idempotent. */ }
+          }
+          await serviceClient.from('jela_subscriptions').update({
+            status: 'expired', cancel_at_period_end: true,
+            cancellation_requested_at: new Date().toISOString(),
+            cancelled_at: new Date().toISOString(),
+            provider_status_reason: 'renewal_payment_failed',
+            updated_at: new Date().toISOString(),
+          })
             .eq('provider_subscription_id', subscriptionCode);
         }
       }
@@ -102,4 +128,3 @@ Deno.serve(async (request) => {
   }
   return jsonResponse(200, { received: true });
 });
-

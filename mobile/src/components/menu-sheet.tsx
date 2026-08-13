@@ -7,8 +7,12 @@ import {
   Clock3,
   Activity,
   CreditCard,
-  Info,
+  Brain,
+  FileText,
+  FolderKanban,
+  Images,
   LogOut,
+  PlusCircle,
   Search,
   Settings,
   ShieldCheck,
@@ -25,15 +29,19 @@ import { useAppTheme } from '@/contexts/theme-context';
 
 const userLinks = [
   ['New chat', '/(user)', Bot],
-  ['History', '/(user)/history', Clock3],
   ['Search', '/(user)/search', Search],
+  ['Create', '/(user)/create', PlusCircle],
+  ['Projects', '/(user)/projects', FolderKanban],
+  ['Recent conversations', '/(user)/history', Clock3],
+  ['Files', '/(user)/files', FileText],
+  ['Memory', '/(user)/memory', Brain],
+  ['Images', '/(user)/images', Images],
   ['Usage', '/(user)/usage', Activity],
   ['Plans', '/(user)/plans', BadgeDollarSign],
   ['Billing', '/(user)/billing', CreditCard],
   ['Profile', '/(user)/profile', UserRound],
   ['Settings', '/(user)/settings', Settings],
   ['Help', '/(user)/help', CircleHelp],
-  ['About', '/(user)/about', Info],
 ] as const;
 
 export function MenuSheet({ visible, onClose }: { visible: boolean; onClose: () => void }) {

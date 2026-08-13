@@ -1,15 +1,10 @@
-import { authenticatedUser, corsHeaders, jsonResponse, paystackRequest } from '../_shared/http.ts';
+import { adminUser, corsHeaders, jsonResponse, paystackRequest } from '../_shared/http.ts';
 
 Deno.serve(async (request) => {
   if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: corsHeaders });
   if (request.method !== 'POST') return jsonResponse(405, { code: 'method_not_allowed', message: 'Use POST.' });
-  const auth = await authenticatedUser(request);
+  const auth = await adminUser(request);
   if (auth instanceof Response) return auth;
-
-  const admin = await auth.serviceClient.rpc('is_jela_admin', { check_user_id: auth.user.id });
-  if (admin.error || admin.data !== true) {
-    return jsonResponse(403, { code: 'admin_required', message: 'Admin access is required.' });
-  }
 
   let body: { plan_id?: unknown; price_minor?: unknown; reason?: unknown };
   try { body = await request.json(); }

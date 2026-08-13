@@ -3,11 +3,12 @@ import * as Clipboard from 'expo-clipboard';
 import * as Haptics from 'expo-haptics';
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
-import { Check, Copy, ImagePlus, Paperclip, RefreshCw, Send, Share2, ThumbsDown, ThumbsUp, X } from 'lucide-react-native';
+import { Check, Copy, ImagePlus, Paperclip, RefreshCw, Send, Share2, Sparkles, ThumbsDown, ThumbsUp, X } from 'lucide-react-native';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   AppState,
+  Linking,
   Pressable,
   Share,
   TextInput,
@@ -33,6 +34,7 @@ import { fetchConversation } from '@/services/conversations';
 import { radius } from '@/theme/tokens';
 import type { ChatMessage } from '@/types/database';
 import { fetchUsageState } from '@/services/credits';
+import { generateImage } from '@/services/security';
 
 type LocalMessage = ChatMessage & { local?: boolean };
 type AttachmentDraft = {
@@ -54,6 +56,7 @@ function makeLocalMessage(role: 'user' | 'assistant', content: string, status: C
     status,
     request_id: null,
     error_code: null,
+    metadata: {},
     created_at: new Date().toISOString(),
     local: true,
   };
@@ -63,6 +66,10 @@ function MessageRow({ message, onRetry, activityLabel }: { message: LocalMessage
   const { colors } = useAppTheme();
   const [copied, setCopied] = useState(false);
   const isUser = message.role === 'user';
+  const generatedImageUrl = typeof message.metadata?.generated_image_url === 'string' ? message.metadata.generated_image_url : null;
+  const citations = Array.isArray(message.metadata?.citations)
+    ? message.metadata.citations.filter((value): value is { url: string; title?: string } => Boolean(value && typeof value === 'object' && 'url' in value && typeof value.url === 'string'))
+    : [];
   return (
     <View style={{ alignItems: isUser ? 'flex-end' : 'stretch', paddingHorizontal: 16, paddingVertical: 9 }}>
       <View
@@ -77,6 +84,8 @@ function MessageRow({ message, onRetry, activityLabel }: { message: LocalMessage
       >
         {!isUser ? <AppText variant="label" tone="success">Jela AI</AppText> : null}
         <AppText selectable>{message.content || (message.status === 'streaming' ? activityLabel ?? 'Thinking…' : '')}</AppText>
+        {generatedImageUrl ? <Image source={{ uri: generatedImageUrl }} style={{ width: '100%', aspectRatio: 1, borderRadius: radius.lg, backgroundColor: colors.surface }} contentFit="cover" transition={250} /> : null}
+        {citations.length ? <View style={{ gap: 6 }}><AppText variant="caption" tone="muted">Sources</AppText>{citations.map((citation, index) => <Pressable key={`${citation.url}-${index}`} accessibilityRole="link" onPress={() => void Linking.openURL(citation.url)}><AppText tone="success" variant="caption" numberOfLines={2}>{index + 1}. {citation.title || citation.url}</AppText></Pressable>)}</View> : null}
         {message.status === 'streaming' ? <ActivityIndicator color={colors.primary} size="small" style={{ alignSelf: 'flex-start' }} /> : null}
         {message.status === 'failed' ? (
           <View style={{ gap: 8 }}>
@@ -119,6 +128,8 @@ export function ChatScreen({ initialConversationId }: { initialConversationId?: 
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(Boolean(initialConversationId));
   const [sending, setSending] = useState(false);
+  const [creatingImage, setCreatingImage] = useState(false);
+  const [composeMode, setComposeMode] = useState<'chat' | 'image'>('chat');
   const [error, setError] = useState<string | null>(null);
   const [attachments, setAttachments] = useState<AttachmentDraft[]>([]);
   const [pickingAttachment, setPickingAttachment] = useState(false);
@@ -240,6 +251,25 @@ export function ChatScreen({ initialConversationId }: { initialConversationId?: 
       setError('Wait for each attachment to finish uploading, retry it, or remove it.');
       return;
     }
+    if (composeMode === 'image') {
+      setCreatingImage(true); setError(null);
+      const localUser = makeLocalMessage('user', parsed.data, 'complete');
+      const localAssistant = makeLocalMessage('assistant', 'Creating your image…', 'streaming');
+      setMessages((current) => [...current, localUser, localAssistant]);
+      setInput('');
+      try {
+        const result = await generateImage({ prompt: parsed.data, conversationId, requestId: createRequestId() });
+        setConversationId(result.image.conversationId);
+        await load(result.image.conversationId, false);
+        await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      } catch (caught) {
+        setMessages((current) => current.map((item) => item.id === localAssistant.id
+          ? { ...item, status: 'failed', content: 'Image creation did not complete.' }
+          : item));
+        setError(friendlyError(caught, 'Jela could not create that image.'));
+      } finally { setCreatingImage(false); }
+      return;
+    }
     await runRequest(parsed.data, createRequestId(), attachments.map((item) => item.id));
   };
 
@@ -342,7 +372,11 @@ export function ChatScreen({ initialConversationId }: { initialConversationId?: 
         ) : null}
         {canChat ? (
           <View style={{ borderTopWidth: 1, borderTopColor: colors.border, backgroundColor: colors.background, paddingHorizontal: 12, paddingTop: 10, paddingBottom: 8, gap: 8 }}>
-            <View style={{ flexDirection: 'row', gap: 8 }}>{allowedModes.map((item) => <Pressable key={item} onPress={() => { setMode(item); void Haptics.selectionAsync(); }} style={{ paddingHorizontal: 11, paddingVertical: 6, borderRadius: 999, backgroundColor: mode === item ? colors.primary : colors.surface }}><AppText variant="caption" style={mode === item ? { color: '#FFFFFF' } : undefined}>{item === 'auto' ? 'Auto' : item === 'deep_think' ? 'Deep Think' : 'Research'}</AppText></Pressable>)}</View>
+            <View style={{ flexDirection: 'row', gap: 8, flexWrap: 'wrap' }}>
+              <Pressable onPress={() => { setComposeMode('chat'); void Haptics.selectionAsync(); }} style={{ paddingHorizontal: 11, paddingVertical: 6, borderRadius: 999, backgroundColor: composeMode === 'chat' ? colors.primary : colors.surface }}><AppText variant="caption" style={composeMode === 'chat' ? { color: '#FFFFFF' } : undefined}>Chat</AppText></Pressable>
+              <Pressable onPress={() => { setComposeMode('image'); setAttachments([]); void Haptics.selectionAsync(); }} style={{ paddingHorizontal: 11, paddingVertical: 6, borderRadius: 999, backgroundColor: composeMode === 'image' ? colors.accent : colors.surface, flexDirection: 'row', gap: 5, alignItems: 'center' }}><Sparkles color={composeMode === 'image' ? '#FFFFFF' : colors.text} size={14} /><AppText variant="caption" style={composeMode === 'image' ? { color: '#FFFFFF' } : undefined}>Create image</AppText></Pressable>
+              {composeMode === 'chat' ? allowedModes.map((item) => <Pressable key={item} onPress={() => { setMode(item); void Haptics.selectionAsync(); }} style={{ paddingHorizontal: 11, paddingVertical: 6, borderRadius: 999, backgroundColor: mode === item ? colors.primary : colors.surface }}><AppText variant="caption" style={mode === item ? { color: '#FFFFFF' } : undefined}>{item === 'auto' ? 'Auto' : item === 'deep_think' ? 'Deep Think' : 'Research'}</AppText></Pressable>) : null}
+            </View>
             {!usageAvailable ? <AppText tone="accent" variant="caption">Usage limit reached. Open Usage to see the next available reset.</AppText> : null}
             {attachments.map((item) => (
               <View key={item.id} style={{ flexDirection: 'row', alignItems: 'center', gap: 8, alignSelf: 'flex-start', backgroundColor: colors.surface, borderRadius: radius.pill, paddingHorizontal: 11, paddingVertical: 6 }}>
@@ -354,7 +388,7 @@ export function ChatScreen({ initialConversationId }: { initialConversationId?: 
               </View>
             ))}
             <View style={{ flexDirection: 'row', alignItems: 'flex-end', gap: 8 }}>
-              {flags.attachments_enabled && account?.status === 'active' ? (
+              {composeMode === 'chat' && flags.attachments_enabled && account?.status === 'active' ? (
                 <><Pressable accessibilityLabel="Attach an image" accessibilityRole="button" disabled={pickingAttachment || sending} onPress={attachImage} style={{ padding: 11 }}>
                   {pickingAttachment ? <ActivityIndicator color={colors.primary} /> : <ImagePlus color={colors.text} />}
                 </Pressable><Pressable accessibilityLabel="Attach a file" accessibilityRole="button" disabled={pickingAttachment || sending} onPress={attach} style={{ padding: 11 }}><Paperclip color={colors.text} /></Pressable></>
@@ -363,22 +397,22 @@ export function ChatScreen({ initialConversationId }: { initialConversationId?: 
                 accessibilityLabel="Message Jela AI"
                 multiline
                 maxLength={8000}
-                placeholder="Ask Jela…"
+                placeholder={composeMode === 'image' ? 'Describe the image you want…' : 'Ask Jela…'}
                 placeholderTextColor={colors.textMuted}
                 selectionColor={colors.primary}
                 value={input}
                 onChangeText={setInput}
-                editable={!sending && usageAvailable}
+                editable={!sending && !creatingImage && usageAvailable}
                 style={{ flex: 1, maxHeight: 140, minHeight: 48, borderRadius: radius.lg, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surface, color: colors.text, fontSize: 16, paddingHorizontal: 15, paddingVertical: 12 }}
               />
               <Pressable
-                accessibilityLabel={sending ? 'Sending message' : 'Send message'}
+                accessibilityLabel={sending || creatingImage ? 'Request in progress' : composeMode === 'image' ? 'Create image' : 'Send message'}
                 accessibilityRole="button"
-                disabled={!sending && ((!input.trim() && attachments.length === 0) || !canSend)}
+                disabled={creatingImage || (!sending && ((!input.trim() && attachments.length === 0) || !canSend))}
                 onPress={() => sending ? abortRef.current?.abort() : void submit()}
-                style={{ width: 48, height: 48, alignItems: 'center', justifyContent: 'center', borderRadius: radius.pill, backgroundColor: colors.primary, opacity: !sending && ((!input.trim() && attachments.length === 0) || !canSend) ? 0.45 : 1 }}
+                style={{ width: 48, height: 48, alignItems: 'center', justifyContent: 'center', borderRadius: radius.pill, backgroundColor: composeMode === 'image' ? colors.accent : colors.primary, opacity: !sending && ((!input.trim() && attachments.length === 0) || !canSend) ? 0.45 : 1 }}
               >
-                {sending ? <X color="#FFFFFF" size={21} /> : <Send color="#FFFFFF" size={21} />}
+                {sending ? <X color="#FFFFFF" size={21} /> : creatingImage ? <ActivityIndicator color="#FFFFFF" /> : composeMode === 'image' ? <Sparkles color="#FFFFFF" size={21} /> : <Send color="#FFFFFF" size={21} />}
               </Pressable>
             </View>
           </View>

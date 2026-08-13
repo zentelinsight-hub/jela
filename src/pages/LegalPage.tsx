@@ -3,11 +3,11 @@ import { Seo } from '../components/Seo'
 const privacySections = [
   {
     title: '1. Scope of this policy',
-    body: <><p>This Privacy Policy explains how Zentel Insight handles information in connection with the public Jela AI website and, where expressly stated, the Jela AI service as it becomes available. Jela AI is a product powered by Zentel Insight.</p><p>The public website does not currently provide account creation, sign-in or AI chat. Additional application-specific privacy information may be added when the Android application is released.</p></>,
+    body: <><p>This Privacy Policy explains how Zentel Insight handles information for the public Jela AI website and Android service. Jela AI is a product powered by Zentel Insight.</p><p>The public website provides information, documentation and the official Android download; account creation, sign-in and the personal AI workspace are provided inside the Android application.</p></>,
   },
   {
     title: '2. Information you provide',
-    body: <><p>If you contact us by email, phone or WhatsApp, we receive the information you choose to provide, such as your contact details and the content of your enquiry. Do not send passwords, verification codes or private credentials.</p><p>When application accounts, conversations or file features become available, the policy will be updated to explain the relevant information flows before or alongside release.</p></>,
+    body: <><p>If you contact us by email, phone or WhatsApp, we receive the information you choose to provide. Do not send passwords, verification codes or private credentials.</p><p>In the application, Jela stores profile and security state, conversations, preferences, selected Memory, Projects, private workspace files and extracted sections, generated images, devices, notifications, usage, subscription and billing records needed to operate your account.</p></>,
   },
   {
     title: '3. Technical information',
@@ -23,11 +23,11 @@ const privacySections = [
   },
   {
     title: '6. Retention and security',
-    body: <p>We aim to retain information only for as long as reasonably needed for the purpose for which it was collected, operational continuity, security, dispute handling and applicable obligations. No method of storage or transmission can be guaranteed completely secure.</p>,
+    body: <p>Workspace data persists so it can synchronize after sign-in on another verified device. The app provides deletion controls for conversations, Memory, files and images. Permanent account deletion removes private workspace storage and application records before deleting authentication access, after required verification and subscription cancellation. Security and billing records may be retained where necessary for fraud prevention, disputes or legal obligations. No method of storage or transmission can be guaranteed completely secure.</p>,
   },
   {
     title: '7. Your choices',
-    body: <p>You may contact us to ask a privacy question or make a request relating to information you provided. The availability and scope of specific rights depend on applicable law and the circumstances of the request. We may need to verify identity before acting.</p>,
+    body: <p>You can turn Memory or automatic remembering off, edit or forget individual memories, clear Memory without deleting chats, remove workspace files and images, delete individual conversations, remove notification registrations and request permanent account deletion in the app. You may also contact us with a privacy request; we may need to verify identity before acting.</p>,
   },
   {
     title: '8. Children',
@@ -94,7 +94,7 @@ export default function LegalPage({ type }: { type: 'privacy' | 'terms' }) {
           <p className="eyebrow">Legal</p>
           <h1>{title}</h1>
           <p>{description}</p>
-          <span>Effective August 11, 2026</span>
+          <span>Effective August 13, 2026</span>
         </div>
       </header>
       <div className="container legal-layout">
@@ -103,7 +103,7 @@ export default function LegalPage({ type }: { type: 'privacy' | 'terms' }) {
           <nav>{sections.map((section, index) => <a key={section.title} href={`#section-${index + 1}`}>{section.title}</a>)}</nav>
         </aside>
         <article>
-          <div className="legal-notice">This document is written for clarity and should be reviewed as the Jela AI application, billing model and data practices are finalised.</div>
+          <div className="legal-notice">This document is written in plain language to describe the current website and Android personal-workspace data practices.</div>
           {sections.map((section, index) => (
             <section key={section.title} id={`section-${index + 1}`}>
               <h2>{section.title}</h2>

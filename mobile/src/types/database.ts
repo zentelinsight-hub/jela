@@ -8,6 +8,11 @@ export type JelaAccount = {
   first_name: string;
   last_name: string;
   display_name: string | null;
+  username: string | null;
+  age: number | null;
+  profile_completed_at: string | null;
+  google_identity: boolean;
+  password_set_at: string | null;
   avatar_url: string | null;
   avatar_path: string | null;
   status: AccountStatus;
@@ -33,6 +38,7 @@ export type ChatMessage = {
   status: MessageStatus;
   request_id: string | null;
   error_code: string | null;
+  metadata: Record<string, unknown>;
   created_at: string;
 };
 

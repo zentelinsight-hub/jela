@@ -20,6 +20,26 @@ type Article = {
 }
 
 const articles: Record<string, Article> = {
+  memory: {
+    title: 'Memory',
+    description: 'How Jela remembers useful details and keeps you in control.',
+    updated: 'August 13, 2026',
+    sections: [
+      { id: 'how-it-works', title: 'How Memory works', content: <><p>Jela can save selected useful facts and preferences so you do not have to repeat them. Global memories can help across conversations; Project memories remain inside their Project; conversation context remains narrow.</p><p>Jela retrieves only a small relevant set for a request. It does not attach your entire history to every AI response.</p></> },
+      { id: 'your-controls', title: 'Your controls', content: <><p>The Android app lets you add, edit, pin, unpin or forget individual memories. Memory Settings control whether Jela may reference saved details, remember useful information and use project memory. “Forget everything” clears Memory without deleting conversations.</p></> },
+      { id: 'privacy', title: 'Privacy and limits', content: <><p>Memory is private to your verified account and protected by ownership rules. Plan limits control capacity. If the limit is reached, normal Chat continues and existing memories remain manageable.</p></> },
+    ],
+  },
+  projects: {
+    title: 'Projects',
+    description: 'Keep related chats, instructions, files, images and memory together.',
+    updated: 'August 13, 2026',
+    sections: [
+      { id: 'focused-workspaces', title: 'Focused workspaces', content: <><p>A Project is an optional scoped workspace. Its chats automatically use the Project’s persistent instructions, relevant Project memory and relevant Project files alongside permitted global preferences.</p></> },
+      { id: 'isolation', title: 'Project isolation', content: <><p>Project-only memory and files do not leak into another Project. A normal chat can retrieve global workspace files, while a Project chat can use global files plus files belonging to that Project.</p></> },
+      { id: 'archive-delete', title: 'Archive and delete', content: <><p>Archiving keeps a Project and removes it from the active list. Deleting requires confirmation, removes its files and project memory, and detaches its chats so they remain available in History.</p></> },
+    ],
+  },
   'getting-started': {
     title: 'Getting Started',
     description: 'Understand the role of this website, the future Android application and the official release process.',
@@ -121,17 +141,17 @@ const articles: Record<string, Article> = {
   'files-and-analysis': {
     title: 'Files & Analysis',
     description: 'How file-based context is intended to support Jela AI conversations.',
-    updated: 'August 11, 2026',
+    updated: 'August 13, 2026',
     sections: [
       {
         id: 'intended-support', title: 'Intended support', content: <>
-          <p>Jela AI is intended to support analysis of selected files inside the native application. Depending on the released capability, this may help with summarising, explaining, comparing or structuring information from a supported document.</p>
-          <div className="docs-callout"><Info /><p><strong>Capabilities are still being defined.</strong> Supported formats, file-size limits, image handling and retention behaviour will be documented when the feature is available.</p></div>
+          <p>Jela AI supports private plain-text and text-based PDF workspace files in the Android application. Files can be global or belong to a Project.</p>
+          <div className="docs-callout"><Info /><p><strong>Background processing.</strong> Jela stores the original privately, extracts text, splits it into searchable sections and marks it Ready when indexing finishes. Plan policy controls file size, storage and project-file limits.</p></div>
         </>,
       },
       {
         id: 'prepare-files', title: 'Prepare useful context', content: <>
-          <p>File analysis works best when you explain what the file is and what you want to accomplish. Point to the section that matters, describe the audience and identify any format you want in the response.</p>
+          <p>Jela retrieves only relevant sections for a request rather than sending an entire long document every time. Image-only PDFs are not currently advertised as supported.</p>
         </>,
       },
       {
@@ -144,7 +164,7 @@ const articles: Record<string, Article> = {
   'plans-and-credits': {
     title: 'Plans & usage',
     description: 'A plain-language overview of plan access, usage availability, and reset behavior.',
-    updated: 'August 11, 2026',
+    updated: 'August 13, 2026',
     sections: [
       {
         id: 'why-credits', title: 'How usage is managed', content: <>
@@ -153,7 +173,7 @@ const articles: Record<string, Article> = {
       },
       {
         id: 'plans', title: 'Subscription plans', content: <>
-          <p>Plans may define access to capabilities, included usage and renewal periods. No public prices or plan entitlements have been announced on this website.</p>
+          <p>Plans define access to capabilities and separate usage categories such as Research, image creation, Memory, Projects and workspace storage. Current prices come from the production plan catalog.</p>
           <div className="docs-callout"><Info /><p><strong>Authoritative pricing.</strong> Current prices and billing terms come from the production plan catalog. A plan cannot be purchased until secure checkout is enabled server-side.</p></div>
         </>,
       },
@@ -167,11 +187,11 @@ const articles: Record<string, Article> = {
   'privacy-and-data': {
     title: 'Privacy & Data',
     description: 'An understandable overview of privacy choices, data responsibility and product boundaries.',
-    updated: 'August 11, 2026',
+    updated: 'August 13, 2026',
     sections: [
       {
         id: 'overview', title: 'Privacy overview', content: <>
-          <p>Jela AI is being designed to collect and use information for defined product purposes, communicate material choices clearly and keep public website responsibilities separate from application accounts.</p>
+          <p>Jela AI stores account data needed for a persistent personal workspace, including conversations, selected Memory, Projects, preferences, private files, generated images, usage and subscription state.</p>
           <p>This guide provides an accessible overview. The full <Link to="/privacy">Privacy Policy</Link> is the controlling public policy for the website and future service as described there.</p>
         </>,
       },
@@ -182,7 +202,7 @@ const articles: Record<string, Article> = {
       },
       {
         id: 'data-controls', title: 'Data controls', content: <>
-          <p>Application-level controls for account status and product access are intended to remain appropriately scoped. Detailed retention, deletion, model-processing and conversation-history controls will be documented with the released application.</p>
+          <p>The Android app provides separate controls for conversation deletion, Memory, workspace files, generated images, devices and permanent account deletion. Deleting an account removes private workspace storage and application records before the authentication account is deleted, subject to required subscription cancellation and identity verification.</p>
         </>,
       },
       {

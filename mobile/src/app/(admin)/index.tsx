@@ -11,6 +11,7 @@ import {
   Gauge,
   PackageCheck,
   Settings,
+  BellRing,
   ShieldCheck,
   Users,
 } from 'lucide-react-native';
@@ -24,7 +25,7 @@ import { SectionCard } from '@/components/section-card';
 import { SettingRow } from '@/components/setting-row';
 import { useAppTheme } from '@/contexts/theme-context';
 import { friendlyError } from '@/lib/errors';
-import { fetchAdminOverview } from '@/services/admin';
+import { fetchAdminOverview, fetchAdminWorkspaceMetrics, type AdminWorkspaceMetrics } from '@/services/admin';
 import type { AdminOverview } from '@/types/database';
 
 const links = [
@@ -37,6 +38,7 @@ const links = [
   ['Requests & errors', '/(admin)/requests-errors', FileWarning],
   ['Billing', '/(admin)/billing', Gauge],
   ['Releases', '/(admin)/releases', PackageCheck],
+  ['Notifications', '/(admin)/notifications', BellRing],
   ['Security', '/(admin)/security', ShieldCheck],
   ['Audit log', '/(admin)/audit', BookOpenCheck],
   ['Settings', '/(admin)/settings', Settings],
@@ -46,11 +48,12 @@ export default function AdminHomeScreen() {
   const router = useRouter();
   const { colors } = useAppTheme();
   const [overview, setOverview] = useState<AdminOverview | null>(null);
+  const [workspace, setWorkspace] = useState<AdminWorkspaceMetrics | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const load = async () => {
     setLoading(true);
-    try { setOverview(await fetchAdminOverview()); setError(null); }
+    try { const [nextOverview, nextWorkspace] = await Promise.all([fetchAdminOverview(), fetchAdminWorkspaceMetrics()]); setOverview(nextOverview); setWorkspace(nextWorkspace); setError(null); }
     catch (loadError) { setError(friendlyError(loadError, 'Could not load the admin overview.')); }
     finally { setLoading(false); }
   };
@@ -65,6 +68,7 @@ export default function AdminHomeScreen() {
               ['Active subscriptions', overview.activeSubscriptions], ['Failed requests', overview.failedRequests],
             ].map(([label, value]) => <SectionCard key={String(label)}><AppText variant="headline">{value}</AppText><AppText tone="muted" variant="caption">{label}</AppText></SectionCard>)}
           </View>
+          {workspace ? <SectionCard title="Workspace health"><AppText>Projects: {workspace.active_projects} · Memories: {workspace.active_memories}</AppText><AppText>Files: {workspace.stored_files} · Storage: {(workspace.storage_bytes / 1048576).toFixed(1)} MB</AppText><AppText>Images: {workspace.generated_images} · Web searches: {workspace.web_searches}</AppText><AppText tone={workspace.jobs.failed > 0 ? 'danger' : 'success'}>Jobs: {workspace.jobs.queued} queued · {workspace.jobs.processing} processing · {workspace.jobs.failed} failed</AppText><AppText tone={workspace.embeddings.memory_failed + workspace.embeddings.file_failed > 0 ? 'danger' : 'success'}>Embeddings: {workspace.embeddings.memory_ready} memories · {workspace.embeddings.file_ready} file chunks ready</AppText><AppText tone="muted" variant="caption">Counts and processing health only. Private memory and file content is not exposed.</AppText></SectionCard> : null}
           <AppText variant="title">Operations</AppText>
           {links.map(([title, path, Icon]) => <SettingRow key={path} title={title} icon={<Icon color={colors.textMuted} />} onPress={() => router.push(path as Href)} />)}
         </View>

@@ -25,7 +25,7 @@ export async function uploadAvatarVersion(userId: string, localUri: string, prev
     contentType: 'image/jpeg', upsert: false, cacheControl: '31536000',
   });
   if (uploadError) throw uploadError;
-  const { error: profileError } = await supabase.rpc('set_jela_avatar_path', { p_avatar_path: path });
+  const { error: profileError } = await supabase.rpc('set_jela_avatar_path_v2', { p_avatar_path: path });
   if (profileError) {
     await supabase.storage.from('jela-avatars').remove([path]);
     throw profileError;
@@ -39,7 +39,7 @@ export async function uploadAvatarVersion(userId: string, localUri: string, prev
 
 export async function removeAvatar(path: string | null) {
   const supabase = getSupabase();
-  const { error } = await supabase.rpc('set_jela_avatar_path', { p_avatar_path: null });
+  const { error } = await supabase.rpc('set_jela_avatar_path_v2', { p_avatar_path: null });
   if (error) throw error;
   if (path) await supabase.storage.from('jela-avatars').remove([path]);
 }

@@ -14,18 +14,26 @@ import { AppState } from 'react-native';
 import { hasConfiguredBackend } from '@/lib/config';
 import { authErrorMessage, friendlyError } from '@/lib/errors';
 import { getSupabase } from '@/lib/supabase';
-import { fetchAccount, type AccountSnapshot } from '@/services/account';
+import { fetchAccount, fetchCachedAccount, type AccountSnapshot } from '@/services/account';
+import { fetchLoginStatus } from '@/services/security';
+import { clearWorkspaceCache } from '@/lib/offline-cache';
+import { completeGoogleCallback } from '@/services/oauth';
 
 type AuthContextValue = {
   loading: boolean;
   configured: boolean;
   session: Session | null;
   user: User | null;
+  securityLoading: boolean;
+  verified: boolean;
+  profileComplete: boolean;
+  adminAccessGranted: boolean;
   account: AccountSnapshot['profile'];
   roles: AccountSnapshot['roles'];
   isAdmin: boolean;
   error: string | null;
   refreshAccount: () => Promise<void>;
+  refreshSecurity: () => Promise<void>;
   signOut: () => Promise<void>;
 };
 
@@ -45,6 +53,10 @@ export function AuthProvider({ children }: PropsWithChildren) {
   const [loading, setLoading] = useState(true);
   const [session, setSession] = useState<Session | null>(null);
   const [snapshot, setSnapshot] = useState<AccountSnapshot>({ profile: null, roles: [] });
+  const [securityLoading, setSecurityLoading] = useState(true);
+  const [verified, setVerified] = useState(false);
+  const [profileComplete, setProfileComplete] = useState(false);
+  const [adminAccessGranted, setAdminAccessGranted] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const loadAccount = useCallback(async (user: User | null) => {
@@ -60,6 +72,44 @@ export function AuthProvider({ children }: PropsWithChildren) {
     }
   }, []);
 
+  const loadSecurity = useCallback(async (user: User | null) => {
+    if (!user) {
+      setVerified(false);
+      setProfileComplete(false);
+      setAdminAccessGranted(false);
+      setSnapshot({ profile: null, roles: [] });
+      setSecurityLoading(false);
+      return;
+    }
+    setSecurityLoading(true);
+    try {
+      const status = await fetchLoginStatus();
+      setVerified(status.verified);
+      setProfileComplete(Boolean(status.profileComplete));
+      setAdminAccessGranted(Boolean(status.adminAccessGranted));
+      if (status.verified) await loadAccount(user);
+      else setSnapshot({ profile: null, roles: [] });
+      setError(null);
+    } catch (securityError) {
+      const cached = await fetchCachedAccount(user.id);
+      if (cached?.profile) {
+        setVerified(true);
+        setProfileComplete(Boolean(cached.profile.profile_completed_at));
+        setAdminAccessGranted(false);
+        setSnapshot({ profile: cached.profile, roles: [] });
+        setError('You’re offline. Cached workspace browsing is available; reconnect before using Jela or Admin.');
+      } else {
+        setVerified(false);
+        setProfileComplete(false);
+        setAdminAccessGranted(false);
+        setSnapshot({ profile: null, roles: [] });
+        setError(friendlyError(securityError, 'Could not verify this session. Sign in again.'));
+      }
+    } finally {
+      setSecurityLoading(false);
+    }
+  }, [loadAccount]);
+
   useEffect(() => {
     if (!hasConfiguredBackend) {
       setLoading(false);
@@ -70,13 +120,13 @@ export function AuthProvider({ children }: PropsWithChildren) {
     supabase.auth.getSession().then(async ({ data, error: sessionError }) => {
       if (sessionError) setError(authErrorMessage(sessionError, 'Could not restore your session. Sign in again.'));
       setSession(data.session);
-      await loadAccount(data.session?.user ?? null);
+      await loadSecurity(data.session?.user ?? null);
       setLoading(false);
     });
 
     const { data: listener } = supabase.auth.onAuthStateChange((_event, nextSession) => {
       setSession(nextSession);
-      void loadAccount(nextSession?.user ?? null);
+      setTimeout(() => void loadSecurity(nextSession?.user ?? null), 0);
     });
 
     const handleUrl = async ({ url }: { url: string }) => {
@@ -84,7 +134,9 @@ export function AuthProvider({ children }: PropsWithChildren) {
       if (accessToken && refreshToken) {
         await supabase.auth.setSession({ access_token: accessToken, refresh_token: refreshToken });
       } else if (code) {
-        await supabase.auth.exchangeCodeForSession(code);
+        const path = Linking.parse(url).path?.replace(/^\/+/, '');
+        if (path === 'callback') await completeGoogleCallback(url);
+        else await supabase.auth.exchangeCodeForSession(code);
       }
     };
     const urlListener = Linking.addEventListener('url', (event) => void handleUrl(event));
@@ -94,17 +146,17 @@ export function AuthProvider({ children }: PropsWithChildren) {
       listener.subscription.unsubscribe();
       urlListener.remove();
     };
-  }, [loadAccount]);
+  }, [loadSecurity]);
 
   useEffect(() => {
-    if (!session) return;
+    if (!session || !verified) return;
     const supabase = getSupabase();
     const channel = supabase.channel(`account-${session.user.id}`)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'jela_accounts', filter: `id=eq.${session.user.id}` }, () => void loadAccount(session.user))
       .on('postgres_changes', { event: '*', schema: 'public', table: 'jela_subscriptions', filter: `user_id=eq.${session.user.id}` }, () => void loadAccount(session.user))
       .subscribe();
     return () => { void supabase.removeChannel(channel); };
-  }, [loadAccount, session]);
+  }, [loadAccount, session, verified]);
 
   useEffect(() => {
     if (!session) return;
@@ -114,11 +166,11 @@ export function AuthProvider({ children }: PropsWithChildren) {
       void supabase.auth.getSession().then(({ data }) => {
         const currentUser = data.session?.user ?? null;
         setSession(data.session);
-        void loadAccount(currentUser);
+        void loadSecurity(currentUser);
       });
     });
     return () => listener.remove();
-  }, [loadAccount, session]);
+  }, [loadSecurity, session]);
 
   const value = useMemo<AuthContextValue>(
     () => ({
@@ -126,16 +178,22 @@ export function AuthProvider({ children }: PropsWithChildren) {
       configured: hasConfiguredBackend,
       session,
       user: session?.user ?? null,
+      securityLoading,
+      verified,
+      profileComplete,
+      adminAccessGranted,
       account: snapshot.profile,
       roles: snapshot.roles,
       isAdmin: snapshot.roles.includes('admin'),
       error,
       refreshAccount: () => loadAccount(session?.user ?? null),
+      refreshSecurity: () => loadSecurity(session?.user ?? null),
       signOut: async () => {
-        if (hasConfiguredBackend) await getSupabase().auth.signOut({ scope: 'local' });
+        if (hasConfiguredBackend) await getSupabase().auth.signOut({ scope: 'global' });
+        await clearWorkspaceCache();
       },
     }),
-    [error, loadAccount, loading, session, snapshot],
+    [adminAccessGranted, error, loadAccount, loadSecurity, loading, profileComplete, securityLoading, session, snapshot, verified],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

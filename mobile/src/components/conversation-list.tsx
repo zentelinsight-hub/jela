@@ -1,8 +1,8 @@
 import type { Href } from 'expo-router';
 import { useRouter } from 'expo-router';
-import { Archive, Check, MessageSquareText, Pencil, X } from 'lucide-react-native';
+import { Archive, Check, MessageSquareText, Pencil, Trash2, X } from 'lucide-react-native';
 import { useCallback, useEffect, useState } from 'react';
-import { AppState, FlatList, Pressable, TextInput, View } from 'react-native';
+import { Alert, AppState, FlatList, Pressable, TextInput, View } from 'react-native';
 
 import { AppText } from '@/components/app-text';
 import { Button } from '@/components/button';
@@ -15,6 +15,7 @@ import { archiveConversation, listConversations, renameConversation } from '@/se
 import { radius } from '@/theme/tokens';
 import type { Conversation } from '@/types/database';
 import { getSupabase } from '@/lib/supabase';
+import { workspaceService } from '@/services/workspace';
 
 export function ConversationList({ query = '' }: { query?: string }) {
   const router = useRouter();
@@ -89,6 +90,7 @@ export function ConversationList({ query = '' }: { query?: string }) {
           >
             <Archive color={colors.textMuted} size={19} />
           </Pressable>
+          <Pressable accessibilityLabel={`Delete ${item.title}`} hitSlop={10} onPress={(event) => { event.stopPropagation(); Alert.alert('Delete conversation?', 'Messages, chat attachments, generated images, and summaries in this conversation will be permanently removed.', [{ text: 'Cancel', style: 'cancel' }, { text: 'Delete', style: 'destructive', onPress: () => void workspaceService.deleteConversation(item.id).then(() => setItems((current) => current.filter((entry) => entry.id !== item.id))).catch((caught) => setError(friendlyError(caught, 'Could not delete this conversation.'))) }]); }} style={{ padding: 7 }}><Trash2 color={colors.danger} size={19} /></Pressable>
         </Pressable>
       )}
     />

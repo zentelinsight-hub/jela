@@ -39,12 +39,12 @@ export default function LoginScreen() {
     const result = await getSupabase().auth.signInWithPassword({ email: parsedEmail.data, password });
     setLoading(false);
     if (result.error) setError(authErrorMessage(result.error, 'Sign-in failed. Check your details and try again.'));
-    else router.replace('/');
+    else router.replace('/(auth)/login-verification' as Href);
   };
 
   const googleSignIn = async () => {
     setGoogleLoading(true); setError(null);
-    try { await continueWithGoogle(); router.replace('/'); }
+    try { await continueWithGoogle(); router.replace('/(auth)/login-verification' as Href); }
     catch (caught) { setError(authErrorMessage(caught instanceof Error ? caught : null, 'Unable to sign in with Google. Please try again.')); }
     finally { setGoogleLoading(false); }
   };

@@ -3,10 +3,17 @@ import * as WebBrowser from 'expo-web-browser';
 
 import { getSupabase } from '@/lib/supabase';
 import { UserMessageError } from '@/lib/errors';
+import type { Session } from '@supabase/supabase-js';
 
 void WebBrowser.maybeCompleteAuthSession();
 
-export const nativeOAuthRedirect = Linking.createURL('auth/callback');
+// Expo Router route groups such as `(auth)` are not part of the external URL.
+// Keep Google OAuth on the app-owned `jela://callback` deep link so Supabase
+// never falls back to the marketing website after provider consent.
+export const nativeOAuthRedirect = Linking.createURL('callback');
+
+let pendingCode: string | null = null;
+let pendingExchange: Promise<Session> | null = null;
 
 function providerError(url: string) {
   const params = Linking.parse(url).queryParams ?? {};
@@ -20,9 +27,17 @@ export async function completeGoogleCallback(url: string) {
   const rawCode = callbackParams.code;
   const code = Array.isArray(rawCode) ? rawCode[0] : typeof rawCode === 'string' ? rawCode : null;
   if (!code) throw new UserMessageError('Unable to complete Google sign-in. Please try again.');
-  const exchanged = await getSupabase().auth.exchangeCodeForSession(code);
-  if (exchanged.error || !exchanged.data.session) throw new UserMessageError('Unable to complete Google sign-in. Please try again.');
-  return exchanged.data.session;
+  if (pendingCode === code && pendingExchange) return pendingExchange;
+  pendingCode = code;
+  pendingExchange = (async () => {
+    const current = await getSupabase().auth.getSession();
+    if (current.data.session) return current.data.session;
+    const exchanged = await getSupabase().auth.exchangeCodeForSession(code);
+    if (exchanged.error || !exchanged.data.session) throw new UserMessageError('Unable to complete Google sign-in. Please try again.');
+    return exchanged.data.session;
+  })();
+  try { return await pendingExchange; }
+  finally { pendingCode = null; pendingExchange = null; }
 }
 
 export async function continueWithGoogle() {

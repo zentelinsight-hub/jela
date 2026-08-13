@@ -1,7 +1,7 @@
 {
   "name": "jela-ai-mobile",
   "main": "expo-router/entry",
-  "version": "1.2.0",
+  "version": "1.3.0",
   "dependencies": {
     "@expo/ui": "~57.0.10",
     "@react-native-async-storage/async-storage": "2.2.0",
@@ -15,6 +15,7 @@
     "expo-dev-client": "~57.0.11",
     "expo-device": "~57.0.1",
     "expo-document-picker": "~57.0.1",
+    "expo-file-system": "~57.0.2",
     "expo-font": "~57.0.1",
     "expo-glass-effect": "~57.0.1",
     "expo-haptics": "~57.0.1",
@@ -22,8 +23,11 @@
     "expo-image-manipulator": "~57.0.9",
     "expo-image-picker": "~57.0.9",
     "expo-linking": "~57.0.5",
+    "expo-network": "~57.0.1",
+    "expo-notifications": "~57.0.10",
     "expo-router": "~57.0.12",
     "expo-secure-store": "~57.0.1",
+    "expo-sharing": "~57.0.11",
     "expo-splash-screen": "~57.0.6",
     "expo-status-bar": "~57.0.1",
     "expo-symbols": "~57.0.2",

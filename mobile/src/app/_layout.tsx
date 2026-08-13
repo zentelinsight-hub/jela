@@ -11,6 +11,9 @@ import { FeatureProvider } from '@/contexts/feature-context';
 import { ThemeProvider, useAppTheme } from '@/contexts/theme-context';
 import { UpdateGate } from '@/components/update-gate';
 import { LaunchSplash } from '@/components/launch-splash';
+import { NotificationCoordinator } from '@/components/notification-coordinator';
+import { OfflineBanner } from '@/components/offline-banner';
+import { MemoryOnboarding } from '@/components/memory-onboarding';
 
 void SplashScreen.preventAutoHideAsync();
 
@@ -36,6 +39,9 @@ function NavigationRoot() {
           }}
         />
       </UpdateGate>
+      <NotificationCoordinator />
+      <OfflineBanner />
+      <MemoryOnboarding />
       {!loading && showLaunchSplash ? <LaunchSplash onFinished={finishSplash} /> : null}
     </>
   );

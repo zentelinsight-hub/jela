@@ -164,7 +164,6 @@ additional_redirect_urls = [
   "https://www.jelaai.com.ng/email-verified",
   "https://www.jelaai.com.ng/reset-password",
   "https://www.jelaai.com.ng/payment-return",
-  "jela://auth/callback",
   "jela://callback",
   "jela://reset-password",
   "jela://payment-return",
@@ -206,7 +205,7 @@ password_requirements = "lower_upper_letters_digits"
 
 [auth.rate_limit]
 # Number of emails that can be sent per hour. Requires auth.email.smtp to be enabled.
-email_sent = 2
+email_sent = 30
 # Number of SMS messages that can be sent per hour. Requires auth.sms to be enabled.
 sms_sent = 30
 # Number of anonymous sign-ins that can be made per hour per IP address. Requires enable_anonymous_sign_ins = true.
@@ -235,13 +234,17 @@ double_confirm_changes = true
 # If enabled, users need to confirm their email address before signing in.
 enable_confirmations = true
 # If enabled, users will need to reauthenticate or have logged in recently to change their password.
-secure_password_change = false
+secure_password_change = true
 # Controls the minimum amount of time that must pass before sending another signup confirmation or password reset email.
 max_frequency = "1m"
 # Number of characters used in the email OTP.
-otp_length = 8
+otp_length = 6
 # Number of seconds before the email OTP expires (defaults to 1 hour).
-otp_expiry = 3600
+otp_expiry = 600
+
+[auth.email.template.magic_link]
+subject = "Your Jela AI verification code"
+content_path = "./supabase/templates/magic_link.html"
 
 # Use a production-ready SMTP server
 # [auth.email.smtp]
@@ -279,11 +282,11 @@ max_frequency = "5s"
 # 4152127777 = "123456"
 
 # Configure logged in session timeouts.
-# [auth.sessions]
+[auth.sessions]
 # Force log out after the specified duration.
-# timebox = "24h"
+timebox = "720h"
 # Force log out if the user has been inactive longer than the specified duration.
-# inactivity_timeout = "8h"
+inactivity_timeout = "168h"
 
 # This hook runs before a new user is created and allows developers to reject the request based on the incoming user object.
 # [auth.hook.before_user_created]
@@ -397,6 +400,11 @@ enabled = true
 verify_jwt = true
 entrypoint = "./functions/jela-chat/index.ts"
 
+[functions.jela-execute]
+enabled = true
+verify_jwt = true
+entrypoint = "./functions/jela-chat/index.ts"
+
 [functions.jela-payment-initialize]
 enabled = true
 verify_jwt = true
@@ -421,6 +429,66 @@ entrypoint = "./functions/jela-admin-health/index.ts"
 enabled = true
 verify_jwt = true
 entrypoint = "./functions/jela-admin-plan-version/index.ts"
+
+[functions.jela-login-status]
+enabled = true
+verify_jwt = true
+entrypoint = "./functions/jela-login-status/index.ts"
+
+[functions.jela-login-start]
+enabled = true
+verify_jwt = true
+entrypoint = "./functions/jela-login-start/index.ts"
+
+[functions.jela-login-verify]
+enabled = true
+verify_jwt = true
+entrypoint = "./functions/jela-login-verify/index.ts"
+
+[functions.jela-admin-access]
+enabled = true
+verify_jwt = true
+entrypoint = "./functions/jela-admin-access/index.ts"
+
+[functions.jela-image-generate]
+enabled = true
+verify_jwt = true
+entrypoint = "./functions/jela-image-generate/index.ts"
+
+[functions.jela-subscription-cancel]
+enabled = true
+verify_jwt = true
+entrypoint = "./functions/jela-subscription-cancel/index.ts"
+
+[functions.jela-account-delete]
+enabled = true
+verify_jwt = true
+entrypoint = "./functions/jela-account-delete/index.ts"
+
+[functions.jela-workspace]
+enabled = true
+verify_jwt = true
+entrypoint = "./functions/jela-workspace/index.ts"
+
+[functions.jela-workspace-worker]
+enabled = true
+verify_jwt = true
+entrypoint = "./functions/jela-workspace-worker/index.ts"
+
+[functions.jela-google-password]
+enabled = true
+verify_jwt = true
+entrypoint = "./functions/jela-google-password/index.ts"
+
+[functions.jela-notifications]
+enabled = true
+verify_jwt = true
+entrypoint = "./functions/jela-notifications/index.ts"
+
+[functions.jela-admin-notification]
+enabled = true
+verify_jwt = true
+entrypoint = "./functions/jela-admin-notification/index.ts"
 
 # [edge_runtime.secrets]
 # secret_key = "env(SECRET_VALUE)"
