@@ -124,23 +124,10 @@ export async function authenticatedUser(
 }
 
 export async function verifiedUser(request: Request): Promise<AuthenticatedRequest | Response> {
-  const auth = await authenticatedUser(request);
-  if (auth instanceof Response) return auth;
-  const verification = await auth.serviceClient
-    .from('jela_session_verifications')
-    .select('session_id')
-    .eq('session_id', auth.sessionId)
-    .eq('user_id', auth.user.id)
-    .is('revoked_at', null)
-    .gt('expires_at', new Date().toISOString())
-    .maybeSingle();
-  if (verification.error || !verification.data) {
-    return jsonResponse(403, {
-      code: 'email_verification_required',
-      message: 'Verify the 6-digit code sent to your email to continue.',
-    });
-  }
-  return auth;
+  // Kept as a compatibility boundary for existing protected functions. A valid
+  // Supabase session is now the only sign-in gate; the email OTP second step
+  // has been retired from the product.
+  return authenticatedUser(request);
 }
 
 export async function adminUser(request: Request): Promise<AuthenticatedRequest | Response> {

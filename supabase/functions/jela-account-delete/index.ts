@@ -47,11 +47,6 @@ Deno.serve(async (request) => {
   if (body.confirmation !== 'DELETE') {
     return jsonResponse(400, { code: 'confirmation_required', message: 'Type DELETE to confirm permanent account deletion.' });
   }
-  const verification = await auth.serviceClient.from('jela_session_verifications')
-    .select('verified_at').eq('session_id', auth.sessionId).eq('user_id', auth.user.id).maybeSingle();
-  if (!verification.data || Date.now() - new Date(verification.data.verified_at).getTime() > 10 * 60_000) {
-    return jsonResponse(403, { code: 'recent_verification_required', message: 'Verify a new email code before deleting an account.' });
-  }
   const targetRole = await auth.serviceClient.from('jela_account_roles').select('role')
     .eq('user_id', targetUserId).eq('role', 'admin').maybeSingle();
   if (targetRole.data) {

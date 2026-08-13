@@ -7,21 +7,6 @@ Deno.serve(async (request) => {
   if (auth instanceof Response) return auth;
 
   const now = new Date().toISOString();
-  const verification = await auth.serviceClient.from('jela_session_verifications')
-    .select('verified_at,expires_at')
-    .eq('session_id', auth.sessionId).eq('user_id', auth.user.id)
-    .is('revoked_at', null).gt('expires_at', now).maybeSingle();
-  const verified = Boolean(verification.data) && !verification.error;
-  if (!verified) {
-    return jsonResponse(200, {
-      verified: false,
-      sessionId: auth.sessionId,
-      authMethods: auth.authMethods,
-      email: auth.user.email ?? null,
-      emailConfirmed: Boolean(auth.user.email_confirmed_at),
-    });
-  }
-
   await syncGoogleIdentityProfile(auth);
 
   const [account, roles, adminAccess] = await Promise.all([
@@ -38,9 +23,7 @@ Deno.serve(async (request) => {
   }
   const roleNames = (roles.data ?? []).map((entry) => entry.role);
   return jsonResponse(200, {
-    verified: true,
-    verifiedAt: verification.data?.verified_at ?? null,
-    verificationExpiresAt: verification.data?.expires_at ?? null,
+    authenticated: true,
     account: account.data,
     roles: roleNames,
     profileComplete: Boolean(

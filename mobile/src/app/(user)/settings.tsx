@@ -35,7 +35,7 @@ export default function SettingsScreen() {
     <PageScreen title="Settings" subtitle="Jela AI preferences">
       <View style={{ gap: 10 }}>
         <SettingRow title="Profile" description="Names and account email" icon={<UserRound color={colors.textMuted} />} onPress={go('/(user)/profile')} />
-        <SettingRow title="Account & security" description="Password and verified sign-in" icon={<KeyRound color={colors.textMuted} />} onPress={go('/(user)/account-security')} />
+        <SettingRow title="Account & security" description="Password and secure sign-in" icon={<KeyRound color={colors.textMuted} />} onPress={go('/(user)/account-security')} />
         <SettingRow title="Personalization" description="Preferred name, style, and instructions" icon={<SlidersHorizontal color={colors.textMuted} />} onPress={go('/(user)/personalization')} />
         <SettingRow title="Memory" description="Manage what Jela can remember" icon={<Brain color={colors.textMuted} />} onPress={go('/(user)/memory-settings')} />
         <SettingRow title="My images" description="Your private generated image library" icon={<Images color={colors.textMuted} />} onPress={go('/(user)/images')} />

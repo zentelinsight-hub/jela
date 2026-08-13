@@ -14,18 +14,18 @@ configureNotificationPresentation();
 
 export function NotificationCoordinator() {
   const router = useRouter();
-  const { session, verified, profileComplete } = useAuth();
+  const { session, profileComplete } = useAuth();
   const handledInitial = useRef(false);
 
   useEffect(() => {
-    if (!session || !verified || !profileComplete) return;
+    if (!session || !profileComplete) return;
     void registerNotifications(false).catch(() => undefined);
     const stateListener = AppState.addEventListener('change', (state) => {
       void updateNotificationAppState(state).catch(() => undefined);
       if (state === 'active') void registerNotifications(false).catch(() => undefined);
     });
     return () => stateListener.remove();
-  }, [profileComplete, session, verified]);
+  }, [profileComplete, session]);
 
   useEffect(() => {
     const open = (data: Record<string, unknown>) => {

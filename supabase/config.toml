@@ -164,6 +164,7 @@ additional_redirect_urls = [
   "https://www.jelaai.com.ng/email-verified",
   "https://www.jelaai.com.ng/reset-password",
   "https://www.jelaai.com.ng/payment-return",
+  "jela://auth/callback",
   "jela://callback",
   "jela://reset-password",
   "jela://payment-return",
@@ -232,20 +233,11 @@ enable_signup = true
 # addresses. If disabled, only the new email is required to confirm.
 double_confirm_changes = true
 # If enabled, users need to confirm their email address before signing in.
-enable_confirmations = true
+enable_confirmations = false
 # If enabled, users will need to reauthenticate or have logged in recently to change their password.
-secure_password_change = true
+secure_password_change = false
 # Controls the minimum amount of time that must pass before sending another signup confirmation or password reset email.
 max_frequency = "1m"
-# Number of characters used in the email OTP.
-otp_length = 6
-# Number of seconds before the email OTP expires (defaults to 1 hour).
-otp_expiry = 600
-
-[auth.email.template.magic_link]
-subject = "Your Jela AI verification code"
-content_path = "./supabase/templates/magic_link.html"
-
 # Use a production-ready SMTP server
 # [auth.email.smtp]
 # enabled = true
@@ -283,10 +275,7 @@ max_frequency = "5s"
 
 # Configure logged in session timeouts.
 [auth.sessions]
-# Force log out after the specified duration.
-timebox = "720h"
-# Force log out if the user has been inactive longer than the specified duration.
-inactivity_timeout = "168h"
+# Session duration uses the hosted project defaults on the current plan.
 
 # This hook runs before a new user is created and allows developers to reject the request based on the incoming user object.
 # [auth.hook.before_user_created]
@@ -434,16 +423,6 @@ entrypoint = "./functions/jela-admin-plan-version/index.ts"
 enabled = true
 verify_jwt = true
 entrypoint = "./functions/jela-login-status/index.ts"
-
-[functions.jela-login-start]
-enabled = true
-verify_jwt = true
-entrypoint = "./functions/jela-login-start/index.ts"
-
-[functions.jela-login-verify]
-enabled = true
-verify_jwt = true
-entrypoint = "./functions/jela-login-verify/index.ts"
 
 [functions.jela-admin-access]
 enabled = true

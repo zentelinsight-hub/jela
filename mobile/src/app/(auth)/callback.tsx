@@ -20,7 +20,7 @@ export default function CallbackScreen() {
         }
         const { data } = await getSupabase().auth.getSession();
         if (!data.session) throw new Error('missing_session');
-        router.replace('/(auth)/login-verification' as Href);
+        router.replace('/' as Href);
       } catch { setError('Unable to complete Google sign-in. Please try again.'); }
     };
     void finish();

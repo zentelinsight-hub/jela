@@ -17,13 +17,12 @@ import { grantAdminAccess } from '@/services/security';
 export default function AdminAccessScreen() {
   const router = useRouter();
   const { colors } = useAppTheme();
-  const { session, verified, profileComplete, isAdmin, adminAccessGranted, refreshSecurity, signOut } = useAuth();
+  const { session, profileComplete, isAdmin, adminAccessGranted, refreshSecurity, signOut } = useAuth();
   const [code, setCode] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   if (!session) return <Redirect href="/(auth)/login" />;
-  if (!verified) return <Redirect href={'/(auth)/login-verification' as Href} />;
   if (!profileComplete) return <Redirect href={'/(auth)/profile-completion' as Href} />;
   if (!isAdmin) return <Redirect href="/(user)" />;
   if (adminAccessGranted) return <Redirect href="/(admin)" />;
@@ -49,7 +48,7 @@ export default function AdminAccessScreen() {
         <View style={{ width: 56, height: 56, borderRadius: 18, backgroundColor: colors.userBubble, alignItems: 'center', justifyContent: 'center' }}>
           <LockKeyhole color={colors.primary} size={27} />
         </View>
-        <View style={{ gap: 6 }}><AppText variant="headline">Administrator access</AppText><AppText tone="muted">Your email session is verified. Enter the private administrator code to open the console.</AppText></View>
+        <View style={{ gap: 6 }}><AppText variant="headline">Administrator access</AppText><AppText tone="muted">Enter the private administrator code to open the console.</AppText></View>
         <TextField label="Access code" value={code} onChangeText={setCode} secureTextEntry autoComplete="off" autoCorrect={false} />
         {error ? <AppText tone="danger" variant="caption">{error}</AppText> : null}
         <Button fullWidth loading={loading} onPress={() => void unlock()}>Open Admin Console</Button>

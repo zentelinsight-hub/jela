@@ -25,7 +25,6 @@ type AuthContextValue = {
   session: Session | null;
   user: User | null;
   securityLoading: boolean;
-  verified: boolean;
   profileComplete: boolean;
   adminAccessGranted: boolean;
   account: AccountSnapshot['profile'];
@@ -54,7 +53,6 @@ export function AuthProvider({ children }: PropsWithChildren) {
   const [session, setSession] = useState<Session | null>(null);
   const [snapshot, setSnapshot] = useState<AccountSnapshot>({ profile: null, roles: [] });
   const [securityLoading, setSecurityLoading] = useState(true);
-  const [verified, setVerified] = useState(false);
   const [profileComplete, setProfileComplete] = useState(false);
   const [adminAccessGranted, setAdminAccessGranted] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -74,7 +72,6 @@ export function AuthProvider({ children }: PropsWithChildren) {
 
   const loadSecurity = useCallback(async (user: User | null) => {
     if (!user) {
-      setVerified(false);
       setProfileComplete(false);
       setAdminAccessGranted(false);
       setSnapshot({ profile: null, roles: [] });
@@ -84,22 +81,18 @@ export function AuthProvider({ children }: PropsWithChildren) {
     setSecurityLoading(true);
     try {
       const status = await fetchLoginStatus();
-      setVerified(status.verified);
       setProfileComplete(Boolean(status.profileComplete));
       setAdminAccessGranted(Boolean(status.adminAccessGranted));
-      if (status.verified) await loadAccount(user);
-      else setSnapshot({ profile: null, roles: [] });
+      await loadAccount(user);
       setError(null);
     } catch (securityError) {
       const cached = await fetchCachedAccount(user.id);
       if (cached?.profile) {
-        setVerified(true);
         setProfileComplete(Boolean(cached.profile.profile_completed_at));
         setAdminAccessGranted(false);
         setSnapshot({ profile: cached.profile, roles: [] });
         setError('You’re offline. Cached workspace browsing is available; reconnect before using Jela or Admin.');
       } else {
-        setVerified(false);
         setProfileComplete(false);
         setAdminAccessGranted(false);
         setSnapshot({ profile: null, roles: [] });
@@ -149,14 +142,14 @@ export function AuthProvider({ children }: PropsWithChildren) {
   }, [loadSecurity]);
 
   useEffect(() => {
-    if (!session || !verified) return;
+    if (!session) return;
     const supabase = getSupabase();
     const channel = supabase.channel(`account-${session.user.id}`)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'jela_accounts', filter: `id=eq.${session.user.id}` }, () => void loadAccount(session.user))
       .on('postgres_changes', { event: '*', schema: 'public', table: 'jela_subscriptions', filter: `user_id=eq.${session.user.id}` }, () => void loadAccount(session.user))
       .subscribe();
     return () => { void supabase.removeChannel(channel); };
-  }, [loadAccount, session, verified]);
+  }, [loadAccount, session]);
 
   useEffect(() => {
     if (!session) return;
@@ -179,7 +172,6 @@ export function AuthProvider({ children }: PropsWithChildren) {
       session,
       user: session?.user ?? null,
       securityLoading,
-      verified,
       profileComplete,
       adminAccessGranted,
       account: snapshot.profile,
@@ -193,7 +185,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
         await clearWorkspaceCache();
       },
     }),
-    [adminAccessGranted, error, loadAccount, loadSecurity, loading, profileComplete, securityLoading, session, snapshot, verified],
+    [adminAccessGranted, error, loadAccount, loadSecurity, loading, profileComplete, securityLoading, session, snapshot],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

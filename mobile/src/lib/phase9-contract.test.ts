@@ -66,10 +66,12 @@ describe('Phase 9 production security contracts', () => {
     expect(chat).toContain('memorySettings.enabled === true');
   });
 
-  it('returns Google OAuth to the native app and requires the six-digit in-app challenge', () => {
+  it('returns Google OAuth to the native app without an email OTP detour', () => {
     expect(oauth).toContain("Linking.createURL('callback')");
     expect(oauth).not.toContain('jelaai.com.ng');
-    expect(googleLogin).toContain("router.replace('/(auth)/login-verification'");
-    expect(googleSignup).toContain("router.replace('/(auth)/login-verification'");
+    expect(googleLogin).toContain("router.replace('/' as Href)");
+    expect(googleSignup).toContain("router.replace('/' as Href)");
+    expect(googleLogin).not.toContain('login-verification');
+    expect(googleSignup).not.toContain('login-verification');
   });
 });

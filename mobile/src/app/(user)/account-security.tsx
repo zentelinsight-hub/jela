@@ -1,5 +1,4 @@
-import { useLocalSearchParams, useRouter, type Href } from 'expo-router';
-import { KeyRound, ShieldCheck } from 'lucide-react-native';
+import { ShieldCheck } from 'lucide-react-native';
 import { useState } from 'react';
 import { View } from 'react-native';
 
@@ -14,9 +13,7 @@ import { friendlyError } from '@/lib/errors';
 import { getSupabase } from '@/lib/supabase';
 
 export default function AccountSecurityScreen() {
-  const router = useRouter();
   const { colors } = useAppTheme();
-  const { reauthenticated } = useLocalSearchParams<{ reauthenticated?: string }>();
   const { user } = useAuth();
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -24,10 +21,6 @@ export default function AccountSecurityScreen() {
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const verify = () => router.push({
-    pathname: '/(auth)/login-verification',
-    params: { purpose: 'sensitive_action', returnTo: '/(user)/account-security?reauthenticated=1' },
-  } as unknown as Href);
   const changePassword = async () => {
     if (password.length < 8 || !/[a-z]/.test(password) || !/[A-Z]/.test(password) || !/\d/.test(password)) {
       setError('Use at least 8 characters with uppercase, lowercase, and a number.'); return;
@@ -38,35 +31,28 @@ export default function AccountSecurityScreen() {
       const result = await getSupabase().auth.updateUser({ password });
       if (result.error) throw result.error;
       setPassword(''); setConfirmPassword(''); setMessage('Password changed successfully.');
-      router.setParams({ reauthenticated: undefined });
     } catch (caught) { setError(friendlyError(caught, 'Your password could not be changed.')); }
     finally { setLoading(false); }
   };
 
   return (
-    <PageScreen title="Account & security" subtitle="Credentials and verified access">
+    <PageScreen title="Account & security" subtitle="Credentials and account access">
       <View style={{ gap: 14 }}>
         <SectionCard>
           <ShieldCheck color={colors.success} />
-          <AppText variant="title">Two-step sign-in is active</AppText>
-          <AppText tone="muted">Every password or Google sign-in is followed by a 6-digit email code tied to that session.</AppText>
+          <AppText variant="title">Secure sign-in</AppText>
+          <AppText tone="muted">Your authenticated session is stored securely on this device. No email code is required after signing in.</AppText>
         </SectionCard>
         <SectionCard title="Account email">
           <AppText>{user?.email ?? 'No email available'}</AppText>
           <AppText tone="muted" variant="caption">Email changes require a separate verified support workflow.</AppText>
         </SectionCard>
         <SectionCard title="Change password">
-          {reauthenticated === '1' ? (
-            <>
-              <TextField label="New password" value={password} onChangeText={setPassword} secureTextEntry autoComplete="new-password" />
-              <TextField label="Confirm new password" value={confirmPassword} onChangeText={setConfirmPassword} secureTextEntry autoComplete="new-password" />
-              {error ? <AppText tone="danger" variant="caption">{error}</AppText> : null}
-              {message ? <AppText tone="success" variant="caption">{message}</AppText> : null}
-              <Button loading={loading} onPress={() => void changePassword()}>Save new password</Button>
-            </>
-          ) : (
-            <Button icon={<KeyRound color="#FFFFFF" size={18} />} onPress={verify}>Verify by email to continue</Button>
-          )}
+          <TextField label="New password" value={password} onChangeText={setPassword} secureTextEntry autoComplete="new-password" />
+          <TextField label="Confirm new password" value={confirmPassword} onChangeText={setConfirmPassword} secureTextEntry autoComplete="new-password" />
+          {error ? <AppText tone="danger" variant="caption">{error}</AppText> : null}
+          {message ? <AppText tone="success" variant="caption">{message}</AppText> : null}
+          <Button loading={loading} onPress={() => void changePassword()}>Save new password</Button>
         </SectionCard>
       </View>
     </PageScreen>

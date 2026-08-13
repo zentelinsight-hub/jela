@@ -15,7 +15,6 @@ import { firstIssue, signUpSchema } from '@/lib/validation';
 import { appConfig } from '@/lib/config';
 import { useAppTheme } from '@/contexts/theme-context';
 import { continueWithGoogle } from '@/services/oauth';
-import { websiteUrl } from '@/lib/website';
 
 const GoogleMark = () => <AppText style={{ color: '#4285F4', fontWeight: '800' }}>G</AppText>;
 
@@ -36,19 +35,16 @@ export default function SignUpScreen() {
     const { data, error: signUpError } = await getSupabase().auth.signUp({
       email: parsed.data.email,
       password: parsed.data.password,
-      options: {
-        emailRedirectTo: websiteUrl('emailVerified'),
-        data: { first_name: parsed.data.firstName, last_name: parsed.data.lastName },
-      },
+      options: { data: { first_name: parsed.data.firstName, last_name: parsed.data.lastName } },
     });
     setLoading(false);
     if (signUpError) setError(authErrorMessage(signUpError, 'Account creation failed. Check your details and try again.'));
-    else if (data.session) router.replace('/(auth)/login-verification' as Href);
-    else router.replace({ pathname: '/(auth)/verify', params: { email: parsed.data.email } });
+    else if (data.session) router.replace('/' as Href);
+    else setError('Your account was created, but the app could not start a session. Please sign in.');
   };
   const googleSignUp = async () => {
     setGoogleLoading(true); setError(null);
-    try { await continueWithGoogle(); router.replace('/(auth)/login-verification' as Href); }
+    try { await continueWithGoogle(); router.replace('/' as Href); }
     catch (caught) { setError(authErrorMessage(caught instanceof Error ? caught : null, 'Unable to continue with Google. Please try again.')); }
     finally { setGoogleLoading(false); }
   };

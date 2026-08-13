@@ -2,9 +2,7 @@ import { getSupabase } from '@/lib/supabase';
 import type { AppRole, JelaAccount } from '@/types/database';
 
 export type LoginStatus = {
-  verified: boolean;
-  verifiedAt?: string | null;
-  verificationExpiresAt?: string | null;
+  authenticated: boolean;
   authMethods?: string[];
   email?: string | null;
   emailConfirmed?: boolean;
@@ -12,14 +10,6 @@ export type LoginStatus = {
   roles?: AppRole[];
   profileComplete?: boolean;
   adminAccessGranted?: boolean;
-};
-
-type Challenge = {
-  challengeId: string;
-  maskedEmail: string;
-  expiresAt: string;
-  resendIn: number;
-  maxAttempts: number;
 };
 
 function responseMessage(data: unknown, fallback: string) {
@@ -36,25 +26,6 @@ async function invoke<T>(name: string, body: Record<string, unknown> = {}, heade
 
 export function fetchLoginStatus() {
   return invoke<LoginStatus>('jela-login-status');
-}
-
-export function startEmailChallenge(purpose: 'login' | 'sensitive_action' = 'login') {
-  return invoke<Challenge>('jela-login-start', { purpose });
-}
-
-export async function verifyEmailChallenge(challengeId: string, code: string) {
-  const result = await invoke<{
-    accessToken: string;
-    refreshToken: string;
-    profileComplete: boolean;
-    isAdmin: boolean;
-  }>('jela-login-verify', { challengeId, code });
-  const session = await getSupabase().auth.setSession({
-    access_token: result.accessToken,
-    refresh_token: result.refreshToken,
-  });
-  if (session.error || !session.data.session) throw session.error ?? new Error('The verified session could not be saved.');
-  return result;
 }
 
 export function grantAdminAccess(code: string) {

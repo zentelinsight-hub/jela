@@ -14,16 +14,16 @@ import { radius } from '@/theme/tokens';
 export function MemoryOnboarding() {
   const router = useRouter();
   const { colors } = useAppTheme();
-  const { session, verified, profileComplete } = useAuth();
+  const { session, profileComplete } = useAuth();
   const [visible, setVisible] = useState(false);
   const [remember, setRemember] = useState(true);
   const [saving, setSaving] = useState(false);
   useEffect(() => {
-    if (!session || !verified || !profileComplete) { setVisible(false); return; }
+    if (!session || !profileComplete) { setVisible(false); return; }
     let active = true;
     void workspaceService.memorySettings().then(({ settings }) => { if (active && settings.onboarded !== true) { setRemember(settings.remember_useful !== false); setVisible(true); } }).catch(() => undefined);
     return () => { active = false; };
-  }, [profileComplete, session, verified]);
+  }, [profileComplete, session]);
   const save = async (enabled: boolean) => {
     setSaving(true);
     try {

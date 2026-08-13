@@ -9,7 +9,7 @@ import { useAuth } from '@/contexts/auth-context';
 
 export default function Index() {
   const {
-    loading, configured, session, securityLoading, verified, profileComplete,
+    loading, configured, session, securityLoading, profileComplete,
     adminAccessGranted, account, roles,
   } = useAuth();
   if (session && securityLoading) return <AppScreen scroll={false}><LoadingState /></AppScreen>;
@@ -32,7 +32,6 @@ export default function Index() {
   }
 
   if (!session) return <Redirect href={'/welcome' as Href} />;
-  if (!verified) return <Redirect href={'/(auth)/login-verification' as Href} />;
   if (!profileComplete) return <Redirect href={'/(auth)/profile-completion' as Href} />;
   if (account?.status === 'suspended' || account?.status === 'deactivated') {
     return <Redirect href="/(user)/account-blocked" />;

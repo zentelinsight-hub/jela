@@ -1,5 +1,5 @@
 import * as Haptics from 'expo-haptics';
-import { Redirect, useRouter, type Href } from 'expo-router';
+import { Redirect, useRouter } from 'expo-router';
 import { UserRoundCheck } from 'lucide-react-native';
 import { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Image, View } from 'react-native';
@@ -20,7 +20,7 @@ import { setGoogleAccountPassword } from '@/services/security';
 export default function ProfileCompletionScreen() {
   const router = useRouter();
   const { colors } = useAppTheme();
-  const { session, user, verified, profileComplete, account, refreshAccount, refreshSecurity } = useAuth();
+  const { session, user, profileComplete, account, refreshAccount, refreshSecurity } = useAuth();
   const hydrated = useRef(false);
   const [form, setForm] = useState({
     firstName: account?.first_name ?? '', lastName: account?.last_name ?? '', displayName: account?.display_name ?? '',
@@ -73,7 +73,6 @@ export default function ProfileCompletionScreen() {
   }, [form.username]);
 
   if (!session) return <Redirect href="/(auth)/login" />;
-  if (!verified) return <Redirect href={'/(auth)/login-verification' as Href} />;
   if (profileComplete) return <Redirect href="/" />;
 
   const save = async () => {

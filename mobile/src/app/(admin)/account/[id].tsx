@@ -1,4 +1,4 @@
-import { useLocalSearchParams, useRouter, type Href } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import { useCallback, useEffect, useState } from "react";
 import { AppState, Switch, View } from "react-native";
 
@@ -33,10 +33,7 @@ const editableLimitKeys = [
 
 export default function AdminAccountDetailScreen() {
   const router = useRouter();
-  const { id, reauthenticated } = useLocalSearchParams<{
-    id: string;
-    reauthenticated?: string;
-  }>();
+  const { id } = useLocalSearchParams<{ id: string }>();
   const [account, setAccount] = useState<Row | null>(null);
   const [reason, setReason] = useState("");
   const [confirmation, setConfirmation] = useState("");
@@ -161,14 +158,6 @@ export default function AdminAccountDetailScreen() {
     } catch (caught) { setError(friendlyError(caught, "Could not save this entitlement override.")); }
     finally { setWorking(false); }
   };
-  const verifyDeletion = () =>
-    router.push({
-      pathname: "/(auth)/login-verification",
-      params: {
-        purpose: "sensitive_action",
-        returnTo: `/(admin)/account/${id}?reauthenticated=1`,
-      },
-    } as unknown as Href);
   const remove = async () => {
     if (confirmation !== "DELETE") {
       setError("Type DELETE exactly to confirm.");
@@ -327,28 +316,20 @@ export default function AdminAccountDetailScreen() {
                 This uses the same cancellation, private-storage cleanup, data
                 cascade, and authentication deletion pipeline as self-deletion.
               </AppText>
-              {reauthenticated === "1" ? (
-                <>
-                  <TextField
-                    label="Type DELETE to confirm"
-                    value={confirmation}
-                    onChangeText={setConfirmation}
-                    autoCapitalize="characters"
-                  />
-                  <Button
-                    variant="danger"
-                    loading={working}
-                    disabled={confirmation !== "DELETE"}
-                    onPress={() => void remove()}
-                  >
-                    Delete account permanently
-                  </Button>
-                </>
-              ) : (
-                <Button variant="danger" onPress={verifyDeletion}>
-                  Verify by email before deletion
-                </Button>
-              )}
+              <TextField
+                label="Type DELETE to confirm"
+                value={confirmation}
+                onChangeText={setConfirmation}
+                autoCapitalize="characters"
+              />
+              <Button
+                variant="danger"
+                loading={working}
+                disabled={confirmation !== "DELETE"}
+                onPress={() => void remove()}
+              >
+                Delete account permanently
+              </Button>
             </SectionCard>
           ) : null}
           {error ? <AppText tone="danger">{error}</AppText> : null}

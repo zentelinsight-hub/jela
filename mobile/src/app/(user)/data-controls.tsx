@@ -1,4 +1,4 @@
-import { useLocalSearchParams, useRouter, type Href } from 'expo-router';
+import { useRouter, type Href } from 'expo-router';
 import { Brain, Database, FileText, Images, MessageSquareText, ShieldAlert } from 'lucide-react-native';
 import { useState } from 'react';
 import { View } from 'react-native';
@@ -17,17 +17,12 @@ import { deleteAccount } from '@/services/security';
 export default function DataControlsScreen() {
   const router = useRouter();
   const { colors } = useAppTheme();
-  const { reauthenticated } = useLocalSearchParams<{ reauthenticated?: string }>();
   const { signOut } = useAuth();
   const [confirmation, setConfirmation] = useState('');
   const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const go = (path: string) => () => router.push(path as Href);
 
-  const verifyDeletion = () => router.push({
-    pathname: '/(auth)/login-verification',
-    params: { purpose: 'sensitive_action', returnTo: '/(user)/data-controls?reauthenticated=1' },
-  } as unknown as Href);
   const remove = async () => {
     if (confirmation !== 'DELETE') { setError('Type DELETE exactly to confirm.'); return; }
     setDeleting(true); setError(null);
@@ -54,13 +49,9 @@ export default function DataControlsScreen() {
         <SectionCard title="Delete account permanently">
           <ShieldAlert color={colors.danger} />
           <AppText tone="muted">Deletion cancels active renewal, removes private files and application data, and then deletes the authentication account. This cannot be undone.</AppText>
-          {reauthenticated === '1' ? (
-            <>
-              <TextField label="Type DELETE to confirm" value={confirmation} onChangeText={setConfirmation} autoCapitalize="characters" autoCorrect={false} />
-              {error ? <AppText tone="danger" variant="caption">{error}</AppText> : null}
-              <Button variant="danger" loading={deleting} disabled={confirmation !== 'DELETE'} onPress={() => void remove()}>Delete my account</Button>
-            </>
-          ) : <Button variant="danger" onPress={verifyDeletion}>Verify by email before deletion</Button>}
+          <TextField label="Type DELETE to confirm" value={confirmation} onChangeText={setConfirmation} autoCapitalize="characters" autoCorrect={false} />
+          {error ? <AppText tone="danger" variant="caption">{error}</AppText> : null}
+          <Button variant="danger" loading={deleting} disabled={confirmation !== 'DELETE'} onPress={() => void remove()}>Delete my account</Button>
         </SectionCard>
       </View>
     </PageScreen>
